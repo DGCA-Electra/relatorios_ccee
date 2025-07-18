@@ -1,0 +1,13 @@
+# Ambientes virtuais
+venv/
+__pycache__/
+
+# Arquivos de configuração específicos do ambiente
+config_relatorios.json
+
+# Arquivos de IDE/Editor
+.vscode/
+.idea/
+
+# Arquivos de sistema
+*.pyc
