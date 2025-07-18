@@ -1,0 +1,99 @@
+# seu_projeto/config.py
+
+import json
+from pathlib import Path
+
+CONFIG_FILE = Path('config_relatorios.json')
+ANALISTAS = [
+    'Artur Bello Rodrigues', 'Camila Padovan Baptista', 'Cassiana Unruh',
+    'Isabela Loredo', 'Jorge Ferreira', 'Tiago Padilha Foletto'
+]
+MESES = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
+         'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO']
+ANOS = [str(y) for y in range(2025, 2030)]
+
+DEFAULT_CONFIGS = {
+    "GFN001": {
+        "excel_dados": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGA\CCEE\Relatórios CCEE\2025\202506\Garantia Financeira\GFN003 - Excel\ELECTRA_ENERGY_GFN003_jun_25.xlsx",
+        "excel_contatos": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGC\Macro\Contatos de E-mail para Macros.xlsx",
+        "pdfs_dir": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGA\CCEE\Relatórios CCEE\2025\202506\Garantia Financeira\GFN001",
+        "sheet_dados": "GFN003 - Garantia Financeira po",
+        "sheet_contatos": "Planilha1",
+        "header_row": 30,
+        "data_columns": "Agente:Empresa,Garantia Avulsa (R$):Valor"
+    },
+    "SUM001": {
+        "excel_dados": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGA\CCEE\Relatórios CCEE\2025\202506\Garantia Financeira\GFN003 - Excel\ELECTRA_ENERGY_GFN003_jun_25.xlsx",
+        "excel_contatos": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGC\Macro\Contatos de E-mail para Macros.xlsx",
+        "pdfs_dir": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGA\CCEE\Relatórios CCEE\2025\202506\Sumário\SUM001 - Memória_de_Cálculo",
+        "sheet_dados": "GFN003 - Garantia Financeira po",
+        "sheet_contatos": "Planilha1",
+        "header_row": 30,
+        "data_columns": "Agente:Empresa,Garantia Avulsa (R$):Valor"
+    },
+    "LFN001": {
+        "excel_dados": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGA\CCEE\Relatórios CCEE\2025\202505\Liquidação Financeira\LFN004\ELECTRA ENERGY LFN004 mai.25.xlsx",
+        "excel_contatos": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGC\Macro\Contatos de E-mail para Macros.xlsx",
+        "pdfs_dir": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGA\CCEE\Relatórios CCEE\2025\202505\Liquidação Financeira\LFN001",
+        "sheet_dados": "LFN004 - Liquidação Financeira ",
+        "sheet_contatos": "Planilha1",
+        "header_row": 31,
+        "data_columns": "Agente:Empresa,Débito/Crédito:Situacao,Valor a Liquidar (R$):ValorLiquidacao,Valor Liquidado (R$):ValorLiquidado,Inadimplência (R$):ValorInadimplencia"
+    },
+    "LFRES": {
+        "excel_dados": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGA\CCEE\Relatórios CCEE\2025\202505\Liquidação da Energia de Reserva\LFRES002\ELECTRA_ENERGY_LFRES002_mai_25.xlsx",
+        "excel_contatos": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGC\Macro\Contatos de E-mail para Macros.xlsx",
+        "pdfs_dir": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGA\CCEE\Relatórios CCEE\2025\202505\Liquidação da Energia de Reserva\LFRES001",
+        "sheet_dados": "LFRES002 - Liquidação de Energi",
+        "sheet_contatos": "Planilha1",
+        "header_row": 42,
+        "data_columns": "Agente:Empresa,Data do Débito:Data,Valor do Débito (R$):Valor,Tipo Agente:TipoAgente"
+    },
+    "LEMBRETE": {
+        "excel_dados": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGA\CCEE\Relatórios CCEE\2025\202506\Garantia Financeira\GFN003 - Excel\ELECTRA_ENERGY_GFN003_jun_25.xlsx",
+        "excel_contatos": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGC\Macro\Contatos de E-mail para Macros.xlsx",
+        "pdfs_dir": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGA\CCEE\Relatórios CCEE\2025\202506\Garantia Financeira\GFN001",
+        "sheet_dados": "GFN003 - Garantia Financeira po",
+        "sheet_contatos": "Planilha1",
+        "header_row": 30,
+        "data_columns": "Agente:Empresa,Garantia Avulsa (R$):Valor"
+    },
+    "LFRCAP": {
+        "excel_dados": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGA\CCEE\Relatórios CCEE\2025\202504\Liquidação de Reserva de Capacidade\LFRCAP002\ELECTRA_ENERGY_LFRCAP002_abr_25.xlsx",
+        "excel_contatos": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGC\Macro\Contatos de E-mail para Macros.xlsx",
+        "pdfs_dir": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGA\CCEE\Relatórios CCEE\2025\202504\Liquidação de Reserva de Capacidade\LFRCAP001",
+        "sheet_dados": "LFRCAP002 - Liquidação de Reser",
+        "sheet_contatos": "Planilha1",
+        "header_row": 30,
+        "data_columns": "Agente:Empresa,Data do Débito:Data,Valor do Débito (R$):Valor"
+    },
+    "RCAP": {
+        "excel_dados": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGA\CCEE\Relatórios CCEE\2025\202506\Reserva de Capacidade\RCAP002 - Consulta Dinamica\RCAP002 jun.25.xlsx",
+        "excel_contatos": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGC\Macro\Contatos de E-mail para Macros.xlsx",
+        "pdfs_dir": r"C:\Users\malik.mourad\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\GE - ECE\DGCA\DGA\CCEE\Relatórios CCEE\2025\202506\Reserva de Capacidade\RCAP002",
+        "sheet_dados": "Sheet1",
+        "sheet_contatos": "Planilha1",
+        "header_row": 4,
+        "data_columns": "Agente:Empresa,Data:Data,Valor do Débito (R$):Valor"
+    }
+}
+
+
+def load_configs() -> dict:
+    if not CONFIG_FILE.exists():
+        save_configs(DEFAULT_CONFIGS)
+        return DEFAULT_CONFIGS.copy()
+    
+    try:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            loaded_configs = json.load(f)
+            for key, value in DEFAULT_CONFIGS.items():
+                if key not in loaded_configs:
+                    loaded_configs[key] = value
+            return loaded_configs
+    except (json.JSONDecodeError, IOError):
+        return DEFAULT_CONFIGS.copy()
+
+def save_configs(configs: dict):
+    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+        json.dump(configs, f, indent=4, ensure_ascii=False)
