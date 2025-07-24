@@ -5,7 +5,7 @@ import services
 
 st.set_page_config(
     page_title="Envio de Relatórios CCEE",
-    page_icon="static/logo.png",
+    page_icon="static/icon.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
