@@ -399,3 +399,49 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> li
             'email': row['Email'], 'anexos_count': anexos, 'created_count': created_count,
         })
     return results
+
+def preview_dados(report_type: str, analyst: str, month: str, year: str):
+    import streamlit as st
+    from pathlib import Path
+    from config import load_configs, MESES
+    import pandas as pd
+    import logging
+    
+    raiz_sharepoint = st.session_state.get('raiz_sharepoint', '')
+    if not raiz_sharepoint:
+        raise ReportProcessingError("Diretório raiz do SharePoint não informado.")
+    all_configs = load_configs()
+    cfg = all_configs.get(report_type)
+    if not cfg:
+        raise ReportProcessingError(f"'{report_type}' não encontrado nas configs.")
+    excel_dados, excel_contatos, pdfs_dir = montar_caminhos(report_type, year, month, raiz_sharepoint)
+    cfg['excel_dados'] = excel_dados
+    cfg['excel_contatos'] = excel_contatos
+    cfg['pdfs_dir'] = pdfs_dir
+    try:
+        header = int(cfg.get('header_row', 0))
+        df_dados = pd.read_excel(Path(cfg['excel_dados']), sheet_name=cfg['sheet_dados'], header=header)
+        df_contatos = pd.read_excel(Path(cfg['excel_contatos']), sheet_name=cfg['sheet_contatos'])
+    except Exception as e:
+        logging.error(f"Erro ao ler planilhas para preview: {e}")
+        raise ReportProcessingError(f"Erro ao ler as planilhas para pré-visualização. Verifique os caminhos, nomes das abas e linha de cabeçalho. Erro: {e}")
+    try:
+        column_mapping = dict(item.split(':') for item in cfg['data_columns'].split(','))
+    except ValueError:
+        raise ReportProcessingError(f"Formato inválido em 'Mapeamento de Colunas' para {report_type}. Use 'NomeNoExcel:NomePadrão,OutraColuna:OutroNome'.")
+    df_dados.rename(columns=column_mapping, inplace=True)
+    df_contatos.rename(columns={'AGENTE': 'Empresa', 'ANALISTA': 'Analista', 'E-MAILS RELATÓRIOS CCEE': 'Email'}, inplace=True)
+    if 'Empresa' not in df_dados.columns:
+        raise ReportProcessingError(f"Coluna 'Empresa' não encontrada nos dados de {report_type} após mapeamento.")
+    if 'Empresa' not in df_contatos.columns:
+        raise ReportProcessingError("Coluna 'AGENTE' não encontrada nos contatos.")
+    if 'Analista' not in df_contatos.columns:
+        raise ReportProcessingError("Coluna 'ANALISTA' não encontrada nos contatos.")
+    df_merged = pd.merge(df_dados, df_contatos, on='Empresa', how='left')
+    df_filtered = df_merged[df_merged['Analista'] == analyst].copy()
+    if df_filtered.empty:
+        raise ReportProcessingError(f"Nenhum registro para o analista '{analyst}'.")
+    df_filtered['Email'] = df_filtered['Email'].fillna('EMAIL_NAO_ENCONTRADO')
+    preview_df = df_filtered.head(20)  # Mostra as 20 primeiras linhas para preview
+    logging.info(f"Pré-visualização de dados carregada para {analyst} - {report_type} {month}/{year}")
+    return df_filtered, preview_df

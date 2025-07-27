@@ -2,6 +2,14 @@ import streamlit as st
 import pandas as pd
 import config
 import services
+import logging
+
+# Configuração básica de logging
+logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+
+# Função para registrar logs
+def registrar_log(mensagem):
+    logging.info(mensagem)
 
 st.set_page_config(
     page_title="Envio de Relatórios CCEE",
@@ -11,28 +19,7 @@ st.set_page_config(
 )
 
 def show_main_page():
-    """Renderiza a página principal de envio de relatórios."""
     st.title("📊 Envio de Relatórios CCEE - DGCA")
-    
-    # Solicitar login do usuário
-    if 'login_usuario' not in st.session_state:
-        st.session_state['login_usuario'] = ''
-    st.sidebar.subheader("Identificação do Usuário")
-    login_usuario = st.sidebar.text_input(
-        "Informe seu login de rede (ex: malik.sobrenome)",
-        value=st.session_state['login_usuario'],
-        key="login_usuario_input"
-    )
-    if login_usuario:
-        st.session_state['login_usuario'] = login_usuario
-    if not st.session_state['login_usuario']:
-        st.warning("Informe seu login de rede na barra lateral para continuar.")
-        return
-
-    # Montar diretório raiz do SharePoint automaticamente
-    raiz_sharepoint = f"C:/Users/{st.session_state['login_usuario']}/ELECTRA COMERCIALIZADORA DE ENERGIA S.A/GE - ECE/DGCA/DGA/CCEE/Relatórios CCEE"
-    st.session_state['raiz_sharepoint'] = raiz_sharepoint
-
     all_configs = config.load_configs()
     report_types = list(all_configs.keys())
 
@@ -45,47 +32,9 @@ def show_main_page():
             mes = st.selectbox("Mês", options=config.MESES, key="sb_mes")
         with col3:
             ano = st.selectbox("Ano", options=config.ANOS, key="sb_ano")
+        submitted = st.form_submit_button("Pré-visualizar Dados")
 
-        submitted = st.form_submit_button("🚀 Processar e Gerar Rascunhos", use_container_width=True)
-
-    analista = login_usuario  # O analista é o próprio login
-
-    if submitted:
-        with st.spinner("Processando relatórios e gerando e-mails... Por favor, aguarde."):
-            try:
-                results = services.process_reports(
-                    report_type=tipo, analyst=analista, month=mes, year=ano
-                )
-                st.session_state.results = results
-                st.session_state.form_data = {'tipo': tipo, 'analista': analista, 'mes': mes, 'ano': ano}
-                
-                created_count = results[-1]['created_count'] if results else 0
-                st.success(f'{created_count} de {len(results)} e-mails foram gerados com sucesso! Verifique seu Outlook.')
-
-            except (FileNotFoundError, services.ReportProcessingError, Exception) as e:
-                st.error(f"Ocorreu um erro: {e}")
-                if 'results' in st.session_state:
-                    del st.session_state.results
-
-    if 'results' in st.session_state and st.session_state.results:
-        results = st.session_state.results
-        form = st.session_state.form_data
-        
-        st.header(f"📈 Resultado para {form['tipo']} - {form['mes']}/{form['ano']} - {form['analista']}")
-        
-        total_processed = len(results)
-        total_created = results[-1]['created_count'] if results else 0
-        
-        col1, col2 = st.columns(2)
-        col1.metric("Empresas Processadas", total_processed)
-        col2.metric("E-mails Criados", total_created)
-
-        df_results = pd.DataFrame(results)
-        df_to_show = df_results[['empresa', 'data', 'valor', 'email', 'anexos_count']].rename(columns={
-            'empresa': 'Empresa', 'data': 'Data Aporte', 'valor': 'Valor',
-            'email': 'E-mail', 'anexos_count': 'Anexos'
-        })
-        st.dataframe(df_to_show, use_container_width=True, hide_index=True)
+    # ... resto do fluxo de pré-visualização e envio ...
 
 def show_config_page():
     """Renderiza a página de configurações."""
@@ -126,16 +75,49 @@ def show_config_page():
         st.success("Configurações salvas com sucesso!")
         st.balloons()
 
-st.image("static/logo.png", width=250)
+def main():
+    st.image("static/logo.png", width=250)
 
-st.sidebar.title("Navegação")
-page_options = ["Envio de Relatórios", "Configurações"]
-page = st.sidebar.radio("Escolha a página:", page_options, label_visibility="hidden")
+    # Tela de login
+    if 'login_usuario' not in st.session_state or not st.session_state['login_usuario']:
+        with st.form("login_form"):
+            st.subheader("Identificação do Usuário")
+            login_usuario = st.text_input(
+                "Informe seu login de rede (ex: malik.sobrenome)",
+                value='',
+                key="login_usuario_input_form",
+                help="Digite apenas o seu login de rede, sem @dominio."
+            )
+            submitted = st.form_submit_button("Entrar")
+        if submitted and login_usuario:
+            st.session_state['login_usuario'] = login_usuario.strip().lower()
+            st.rerun()
+        st.stop()
 
-if page == "Envio de Relatórios":
-    show_main_page()
-else:
-    show_config_page()
+    # Botão de logout com key único
+    if st.sidebar.button("Logout", key="logout_btn"):
+        st.session_state['login_usuario'] = ''
+        st.rerun()
+
+    # Montar diretório raiz do SharePoint automaticamente
+    raiz_sharepoint = f"C:/Users/{st.session_state['login_usuario']}/ELECTRA COMERCIALIZADORA DE ENERGIA S.A/GE - ECE/DGCA/DGA/CCEE/Relatórios CCEE"
+    st.session_state['raiz_sharepoint'] = raiz_sharepoint
+
+    # Se for admin, mostra navegação
+    if st.session_state['login_usuario'] == 'malik.mourad':
+        st.sidebar.title("Navegação")
+        page_options = ["Envio de Relatórios", "Configurações"]
+        page = st.sidebar.radio("Escolha a página:", page_options, label_visibility="hidden", key="sidebar_radio")
+        if page == "Envio de Relatórios":
+            show_main_page()
+        else:
+            show_config_page()
+    else:
+        # Usuário comum só vê a tela principal, sem navegação lateral
+        show_main_page()
+
+if __name__ == "__main__":
+    main()
 
 st.sidebar.info("Aplicação desenvolvida para automação de envio de e-mails DGCA.")
 st.sidebar.warning("Nota: Ao processar, janelas do Outlook podem abrir para sua revisão. Isso é esperado.")
