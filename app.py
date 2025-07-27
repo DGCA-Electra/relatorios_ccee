@@ -12,7 +12,7 @@ st.set_page_config(
 
 def show_main_page():
     """Renderiza a página principal de envio de relatórios."""
-    st.title("📊 Envio de Relatórios CCEE")
+    st.title("📊 Envio de Relatórios CCEE - DGCA")
     
     all_configs = config.load_configs()
     report_types = list(all_configs.keys())
@@ -71,7 +71,7 @@ def show_main_page():
 def show_config_page():
     """Renderiza a página de configurações."""
     st.title("⚙️ Configurações do Sistema")
-    st.info("Aqui você pode ajustar os caminhos e a estrutura dos arquivos para cada tipo de relatório. As alterações são salvas no arquivo `config_relatorios.json`.")
+    st.info("Aqui você pode ajustar os caminhos e a estrutura dos arquivos para cada tipo de relatório.")
     
     current_configs = config.load_configs()
 
@@ -92,7 +92,19 @@ def show_config_page():
                 with col3:
                     cfg['header_row'] = st.number_input(f"Linha Cabeçalho (inicia em 0)", min_value=0, value=cfg.get('header_row', 0), key=f"header_{tipo}")
 
-                cfg['data_columns'] = st.text_area(f"Mapeamento de Colunas (Formato: NomeNoExcel:NomePadrão,...)", value=cfg.get('data_columns', ''), key=f"map_{tipo}", height=100)
+                # Definir o formato correto para cada tipo de relatório
+                exemplos_mapeamento = {
+                    "GFN001": "Agente:Empresa,Garantia Avulsa (R$):Valor",
+                    "SUM001": "Agente:Empresa,Garantia Avulsa (R$):Valor",
+                    "LFN001": "Agente:Empresa,Débito/Crédito:Situacao,Valor a Liquidar (R$):ValorLiquidacao,Valor Liquidado (R$):ValorLiquidado,Inadimplência (R$):ValorInadimplencia",
+                    "LFRES": "Agente:Empresa,Data do Débito:Data,Valor do Débito (R$):Valor,Tipo Agente:TipoAgente",
+                    "LEMBRETE": "Agente:Empresa,Garantia Avulsa (R$):Valor",
+                    "LFRCAP": "Agente:Empresa,Data do Débito:Data,Valor do Débito (R$):Valor",
+                    "RCAP": "Agente:Empresa,Data:Data,Valor do Débito (R$):Valor"
+                }
+                exemplo = exemplos_mapeamento.get(tipo, "NomeNoExcel:NomePadrao,...")
+                label_mapeamento = f"Mapeamento de Colunas (Exemplo: {exemplo})"
+                cfg['data_columns'] = st.text_area(label_mapeamento, value=cfg.get('data_columns', ''), key=f"map_{tipo}", height=100)
 
         submitted = st.form_submit_button("💾 Salvar Todas as Configurações", use_container_width=True)
 
@@ -112,5 +124,5 @@ if page == "Envio de Relatórios":
 else:
     show_config_page()
 
-st.sidebar.info("Aplicação desenvolvida para automação de processos da Electra.")
+st.sidebar.info("Aplicação desenvolvida para automação de envio de e-mails DGCA.")
 st.sidebar.warning("Nota: Ao processar, janelas do Outlook podem abrir para sua revisão. Isso é esperado.")
