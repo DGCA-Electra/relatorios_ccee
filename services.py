@@ -6,6 +6,7 @@ import sys
 import pythoncom
 from datetime import timedelta
 import re
+import os
 
 try:
     import win32com.client as win32
@@ -281,10 +282,58 @@ REPORT_HANDLERS = {
 # FUNÇÃO PRINCIPAL DE PROCESSAMENTO
 # ==============================================================================
 
+# Função para montar caminhos automaticamente
+def montar_caminhos(tipo, ano, mes, raiz):
+    mes_num = f"{int(mes):02d}" if mes.isdigit() else mes
+    ano_mes = f"{ano}{mes_num}"
+    # Ajuste os nomes dos arquivos e pastas conforme o padrão real dos seus arquivos
+    if tipo == "GFN001":
+        excel_dados = os.path.join(raiz, ano, ano_mes, "Garantia Financeira", "GFN003 - Excel", f"ELECTRA_ENERGY_GFN003_{mes.lower()}_{ano[-2:]}.xlsx")
+        excel_contatos = os.path.join(raiz, ano, ano_mes, "..", "..", "..", "DGC", "Macro", "Contatos de E-mail para Macros.xlsx")
+        pdfs_dir = os.path.join(raiz, ano, ano_mes, "Garantia Financeira", "GFN001")
+    elif tipo == "SUM001":
+        excel_dados = os.path.join(raiz, ano, ano_mes, "Garantia Financeira", "GFN003 - Excel", f"ELECTRA_ENERGY_GFN003_{mes.lower()}_{ano[-2:]}.xlsx")
+        excel_contatos = os.path.join(raiz, ano, ano_mes, "..", "..", "..", "DGC", "Macro", "Contatos de E-mail para Macros.xlsx")
+        pdfs_dir = os.path.join(raiz, ano, ano_mes, "Sumário", "SUM001 - Memória_de_Cálculo")
+    elif tipo == "LFN001":
+        excel_dados = os.path.join(raiz, ano, ano_mes, "Liquidação Financeira", "LFN004", f"ELECTRA ENERGY LFN004 {mes.lower()}.{ano[-2:]}.xlsx")
+        excel_contatos = os.path.join(raiz, ano, ano_mes, "..", "..", "..", "DGC", "Macro", "Contatos de E-mail para Macros.xlsx")
+        pdfs_dir = os.path.join(raiz, ano, ano_mes, "Liquidação Financeira", "LFN001")
+    elif tipo == "LFRES":
+        excel_dados = os.path.join(raiz, ano, ano_mes, "Liquidação da Energia de Reserva", "LFRES002", f"ELECTRA_ENERGY_LFRES002_{mes.lower()}_{ano[-2:]}.xlsx")
+        excel_contatos = os.path.join(raiz, ano, ano_mes, "..", "..", "..", "DGC", "Macro", "Contatos de E-mail para Macros.xlsx")
+        pdfs_dir = os.path.join(raiz, ano, ano_mes, "Liquidação da Energia de Reserva", "LFRES001")
+    elif tipo == "LEMBRETE":
+        excel_dados = os.path.join(raiz, ano, ano_mes, "Garantia Financeira", "GFN003 - Excel", f"ELECTRA_ENERGY_GFN003_{mes.lower()}_{ano[-2:]}.xlsx")
+        excel_contatos = os.path.join(raiz, ano, ano_mes, "..", "..", "..", "DGC", "Macro", "Contatos de E-mail para Macros.xlsx")
+        pdfs_dir = os.path.join(raiz, ano, ano_mes, "Garantia Financeira", "GFN001")
+    elif tipo == "LFRCAP":
+        excel_dados = os.path.join(raiz, ano, ano_mes, "Liquidação de Reserva de Capacidade", "LFRCAP002", f"ELECTRA_ENERGY_LFRCAP002_{mes.lower()}_{ano[-2:]}.xlsx")
+        excel_contatos = os.path.join(raiz, ano, ano_mes, "..", "..", "..", "DGC", "Macro", "Contatos de E-mail para Macros.xlsx")
+        pdfs_dir = os.path.join(raiz, ano, ano_mes, "Liquidação de Reserva de Capacidade", "LFRCAP001")
+    elif tipo == "RCAP":
+        excel_dados = os.path.join(raiz, ano, ano_mes, "Reserva de Capacidade", "RCAP002 - Consulta Dinamica", f"RCAP002 {mes.lower()}.{ano[-2:]}.xlsx")
+        excel_contatos = os.path.join(raiz, ano, ano_mes, "..", "..", "..", "DGC", "Macro", "Contatos de E-mail para Macros.xlsx")
+        pdfs_dir = os.path.join(raiz, ano, ano_mes, "Reserva de Capacidade", "RCAP002")
+    else:
+        excel_dados = excel_contatos = pdfs_dir = ""
+    return excel_dados, excel_contatos, pdfs_dir
+
 def process_reports(report_type: str, analyst: str, month: str, year: str) -> list:
+    import streamlit as st
+    raiz_sharepoint = st.session_state.get('raiz_sharepoint', '')
+    if not raiz_sharepoint:
+        raise ReportProcessingError("Diretório raiz do SharePoint não informado.")
+    
     all_configs = load_configs()
     cfg = all_configs.get(report_type)
     if not cfg: raise ReportProcessingError(f"'{report_type}' não encontrado nas configs.")
+
+    # Montar caminhos automaticamente
+    excel_dados, excel_contatos, pdfs_dir = montar_caminhos(report_type, year, month, raiz_sharepoint)
+    cfg['excel_dados'] = excel_dados
+    cfg['excel_contatos'] = excel_contatos
+    cfg['pdfs_dir'] = pdfs_dir
 
     try:
         header = int(cfg.get('header_row', 0))

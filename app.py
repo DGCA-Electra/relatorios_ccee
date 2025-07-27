@@ -14,22 +14,41 @@ def show_main_page():
     """Renderiza a página principal de envio de relatórios."""
     st.title("📊 Envio de Relatórios CCEE - DGCA")
     
+    # Solicitar login do usuário
+    if 'login_usuario' not in st.session_state:
+        st.session_state['login_usuario'] = ''
+    st.sidebar.subheader("Identificação do Usuário")
+    login_usuario = st.sidebar.text_input(
+        "Informe seu login de rede (ex: malik.sobrenome)",
+        value=st.session_state['login_usuario'],
+        key="login_usuario_input"
+    )
+    if login_usuario:
+        st.session_state['login_usuario'] = login_usuario
+    if not st.session_state['login_usuario']:
+        st.warning("Informe seu login de rede na barra lateral para continuar.")
+        return
+
+    # Montar diretório raiz do SharePoint automaticamente
+    raiz_sharepoint = f"C:/Users/{st.session_state['login_usuario']}/ELECTRA COMERCIALIZADORA DE ENERGIA S.A/GE - ECE/DGCA/DGA/CCEE/Relatórios CCEE"
+    st.session_state['raiz_sharepoint'] = raiz_sharepoint
+
     all_configs = config.load_configs()
     report_types = list(all_configs.keys())
 
     with st.form("report_form"):
         st.subheader("Parâmetros de Envio")
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3 = st.columns(3)
         with col1:
             tipo = st.selectbox("Tipo de Relatório", options=report_types, key="sb_tipo")
         with col2:
-            analista = st.selectbox("Analista", options=config.ANALISTAS, key="sb_analista")
-        with col3:
             mes = st.selectbox("Mês", options=config.MESES, key="sb_mes")
-        with col4:
+        with col3:
             ano = st.selectbox("Ano", options=config.ANOS, key="sb_ano")
 
         submitted = st.form_submit_button("🚀 Processar e Gerar Rascunhos", use_container_width=True)
+
+    analista = login_usuario  # O analista é o próprio login
 
     if submitted:
         with st.spinner("Processando relatórios e gerando e-mails... Por favor, aguarde."):
@@ -71,18 +90,13 @@ def show_main_page():
 def show_config_page():
     """Renderiza a página de configurações."""
     st.title("⚙️ Configurações do Sistema")
-    st.info("Aqui você pode ajustar os caminhos e a estrutura dos arquivos para cada tipo de relatório.")
+    st.info("Aqui você pode ajustar a estrutura das planilhas e o mapeamento de colunas para cada tipo de relatório. Os caminhos dos arquivos são montados automaticamente.")
     
     current_configs = config.load_configs()
 
     with st.form("config_form"):
         for tipo, cfg in current_configs.items():
             with st.expander(f"📋 Configurações para: {tipo}"):
-                st.subheader(f"Caminhos dos Arquivos - {tipo}")
-                cfg['excel_dados'] = st.text_input(f"Arquivo Excel (Dados)", value=cfg.get('excel_dados', ''), key=f"dados_{tipo}")
-                cfg['excel_contatos'] = st.text_input(f"Arquivo Excel (Contatos)", value=cfg.get('excel_contatos', ''), key=f"contatos_{tipo}")
-                cfg['pdfs_dir'] = st.text_input(f"Diretório PDFs", value=cfg.get('pdfs_dir', ''), key=f"pdfs_{tipo}")
-                
                 st.subheader(f"Estrutura das Planilhas - {tipo}")
                 col1, col2, col3 = st.columns([2, 2, 1])
                 with col1:
@@ -92,7 +106,6 @@ def show_config_page():
                 with col3:
                     cfg['header_row'] = st.number_input(f"Linha Cabeçalho (inicia em 0)", min_value=0, value=cfg.get('header_row', 0), key=f"header_{tipo}")
 
-                # Definir o formato correto para cada tipo de relatório
                 exemplos_mapeamento = {
                     "GFN001": "Agente:Empresa,Garantia Avulsa (R$):Valor",
                     "SUM001": "Agente:Empresa,Garantia Avulsa (R$):Valor",
