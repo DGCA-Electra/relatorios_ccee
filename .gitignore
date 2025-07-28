@@ -1,14 +1,30 @@
-# Ambientes virtuais
+# Ignora o ambiente virtual
 venv/
+.env/
+.envrc
+
+# Arquivos do Python
 __pycache__/
+*.py[cod]
+*.pyo
+*.pyd
 
-# Arquivos de configuração específicos do ambiente
-config_relatorios.json
+# Logs e arquivos temporários
+*.log
+*.tmp
+*.bak
 
-# Arquivos de IDE/Editor
+# IDEs
 .vscode/
 .idea/
 
-# Arquivos de sistema
-*.pyc
+# Streamlit
+.streamlit/config.toml
+.streamlit/secrets.toml
 
+# Notebooks temporários
+.ipynb_checkpoints/
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
