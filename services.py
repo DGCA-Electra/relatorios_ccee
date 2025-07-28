@@ -6,6 +6,7 @@ import sys
 import pythoncom
 from datetime import timedelta
 import re
+import os
 
 try:
     import win32com.client as win32
@@ -281,10 +282,92 @@ REPORT_HANDLERS = {
 # FUNÇÃO PRINCIPAL DE PROCESSAMENTO
 # ==============================================================================
 
+# Função para montar caminhos automaticamente
+import os
+
+def montar_caminhos(tipo, ano, mes, raiz):
+    """
+    Monta automaticamente os caminhos dos arquivos baseado nos parâmetros.
+    Extrai padrões do config_relatorios.json para gerar caminhos dinâmicos.
+    """
+    # Mapeamento de meses para formato numérico
+    meses_map = {
+        'JANEIRO': '01', 'FEVEREIRO': '02', 'MARÇO': '03', 'ABRIL': '04',
+        'MAIO': '05', 'JUNHO': '06', 'JULHO': '07', 'AGOSTO': '08',
+        'SETEMBRO': '09', 'OUTUBRO': '10', 'NOVEMBRO': '11', 'DEZEMBRO': '12'
+    }
+    
+    mes_num = meses_map.get(mes.upper(), '01')
+    ano_mes = f"{ano}{mes_num}"
+    mes_abrev = mes.lower()[:3]  # jun, mai, abr, etc.
+    ano_2dig = ano[-2:]  # 25, 26, etc.
+    
+    # Padrões baseados no config_relatorios.json
+    if tipo in ["GFN001", "SUM001", "LEMBRETE"]:
+        pasta_base = "Garantia Financeira"
+        subpasta = "GFN003 - Excel"
+        nome_arquivo = f"ELECTRA_ENERGY_GFN003_{mes_abrev}_{ano_2dig}.xlsx"
+        excel_dados = os.path.join(raiz, ano, ano_mes, pasta_base, subpasta, nome_arquivo)
+        
+        if tipo == "GFN001":
+            pdfs_dir = os.path.join(raiz, ano, ano_mes, pasta_base, "GFN001")
+        elif tipo == "SUM001":
+            pdfs_dir = os.path.join(raiz, ano, ano_mes, "Sumário", "SUM001 - Memória_de_Cálculo")
+        else:  # LEMBRETE
+            pdfs_dir = os.path.join(raiz, ano, ano_mes, pasta_base, "GFN001")
+            
+    elif tipo == "LFN001":
+        pasta_base = "Liquidação Financeira"
+        subpasta = "LFN004"
+        nome_arquivo = f"ELECTRA ENERGY LFN004 {mes_abrev}.{ano_2dig}.xlsx"
+        excel_dados = os.path.join(raiz, ano, ano_mes, pasta_base, subpasta, nome_arquivo)
+        pdfs_dir = os.path.join(raiz, ano, ano_mes, pasta_base, "LFN001")
+        
+    elif tipo == "LFRES":
+        pasta_base = "Liquidação da Energia de Reserva"
+        subpasta = "LFRES002"
+        nome_arquivo = f"ELECTRA_ENERGY_LFRES002_{mes_abrev}_{ano_2dig}.xlsx"
+        excel_dados = os.path.join(raiz, ano, ano_mes, pasta_base, subpasta, nome_arquivo)
+        pdfs_dir = os.path.join(raiz, ano, ano_mes, pasta_base, "LFRES001")
+        
+    elif tipo == "LFRCAP":
+        pasta_base = "Liquidação de Reserva de Capacidade"
+        subpasta = "LFRCAP002"
+        nome_arquivo = f"ELECTRA_ENERGY_LFRCAP002_{mes_abrev}_{ano_2dig}.xlsx"
+        excel_dados = os.path.join(raiz, ano, ano_mes, pasta_base, subpasta, nome_arquivo)
+        pdfs_dir = os.path.join(raiz, ano, ano_mes, pasta_base, "LFRCAP001")
+        
+    elif tipo == "RCAP":
+        pasta_base = "Reserva de Capacidade"
+        subpasta = "RCAP002 - Consulta Dinamica"
+        nome_arquivo = f"RCAP002 {mes_abrev}.{ano_2dig}.xlsx"
+        excel_dados = os.path.join(raiz, ano, ano_mes, pasta_base, subpasta, nome_arquivo)
+        pdfs_dir = os.path.join(raiz, ano, ano_mes, pasta_base, "RCAP002")
+        
+    else:
+        excel_dados = ""
+        pdfs_dir = ""
+    
+    # Arquivo de contatos é sempre o mesmo
+    excel_contatos = os.path.join(raiz, ano, ano_mes, "..", "..", "..", "DGC", "Macro", "Contatos de E-mail para Macros.xlsx")
+    
+    return excel_dados, excel_contatos, pdfs_dir
+
 def process_reports(report_type: str, analyst: str, month: str, year: str) -> list:
+    import streamlit as st
+    raiz_sharepoint = st.session_state.get('raiz_sharepoint', '')
+    if not raiz_sharepoint:
+        raise ReportProcessingError("Diretório raiz do SharePoint não informado.")
+    
     all_configs = load_configs()
     cfg = all_configs.get(report_type)
     if not cfg: raise ReportProcessingError(f"'{report_type}' não encontrado nas configs.")
+
+    # Montar caminhos automaticamente
+    excel_dados, excel_contatos, pdfs_dir = montar_caminhos(report_type, year, month, raiz_sharepoint)
+    cfg['excel_dados'] = excel_dados
+    cfg['excel_contatos'] = excel_contatos
+    cfg['pdfs_dir'] = pdfs_dir
 
     try:
         header = int(cfg.get('header_row', 0))
@@ -350,3 +433,49 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> li
             'email': row['Email'], 'anexos_count': anexos, 'created_count': created_count,
         })
     return results
+
+def preview_dados(report_type: str, analyst: str, month: str, year: str):
+    import streamlit as st
+    from pathlib import Path
+    from config import load_configs, MESES
+    import pandas as pd
+    import logging
+    
+    raiz_sharepoint = st.session_state.get('raiz_sharepoint', '')
+    if not raiz_sharepoint:
+        raise ReportProcessingError("Diretório raiz do SharePoint não informado.")
+    all_configs = load_configs()
+    cfg = all_configs.get(report_type)
+    if not cfg:
+        raise ReportProcessingError(f"'{report_type}' não encontrado nas configs.")
+    excel_dados, excel_contatos, pdfs_dir = montar_caminhos(report_type, year, month, raiz_sharepoint)
+    cfg['excel_dados'] = excel_dados
+    cfg['excel_contatos'] = excel_contatos
+    cfg['pdfs_dir'] = pdfs_dir
+    try:
+        header = int(cfg.get('header_row', 0))
+        df_dados = pd.read_excel(Path(cfg['excel_dados']), sheet_name=cfg['sheet_dados'], header=header)
+        df_contatos = pd.read_excel(Path(cfg['excel_contatos']), sheet_name=cfg['sheet_contatos'])
+    except Exception as e:
+        logging.error(f"Erro ao ler planilhas para preview: {e}")
+        raise ReportProcessingError(f"Erro ao ler as planilhas para pré-visualização. Verifique os caminhos, nomes das abas e linha de cabeçalho. Erro: {e}")
+    try:
+        column_mapping = dict(item.split(':') for item in cfg['data_columns'].split(','))
+    except ValueError:
+        raise ReportProcessingError(f"Formato inválido em 'Mapeamento de Colunas' para {report_type}. Use 'NomeNoExcel:NomePadrão,OutraColuna:OutroNome'.")
+    df_dados.rename(columns=column_mapping, inplace=True)
+    df_contatos.rename(columns={'AGENTE': 'Empresa', 'ANALISTA': 'Analista', 'E-MAILS RELATÓRIOS CCEE': 'Email'}, inplace=True)
+    if 'Empresa' not in df_dados.columns:
+        raise ReportProcessingError(f"Coluna 'Empresa' não encontrada nos dados de {report_type} após mapeamento.")
+    if 'Empresa' not in df_contatos.columns:
+        raise ReportProcessingError("Coluna 'AGENTE' não encontrada nos contatos.")
+    if 'Analista' not in df_contatos.columns:
+        raise ReportProcessingError("Coluna 'ANALISTA' não encontrada nos contatos.")
+    df_merged = pd.merge(df_dados, df_contatos, on='Empresa', how='left')
+    df_filtered = df_merged[df_merged['Analista'] == analyst].copy()
+    if df_filtered.empty:
+        raise ReportProcessingError(f"Nenhum registro para o analista '{analyst}'.")
+    df_filtered['Email'] = df_filtered['Email'].fillna('EMAIL_NAO_ENCONTRADO')
+    preview_df = df_filtered.head(20)  # Mostra as 20 primeiras linhas para preview
+    logging.info(f"Pré-visualização de dados carregada para {analyst} - {report_type} {month}/{year}")
+    return df_filtered, preview_df
