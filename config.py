@@ -20,10 +20,10 @@ DEFAULT_CONFIGS = {
         "data_columns": "Agente:Empresa,Garantia Avulsa (R$):Valor"
     },
     "SUM001": {
-        "sheet_dados": "GFN003 - Garantia Financeira po",
+        "sheet_dados": "LFN004 - Liquidação Financeira ",
         "sheet_contatos": "Planilha1",
-        "header_row": 30,
-        "data_columns": "Agente:Empresa,Garantia Avulsa (R$):Valor"
+        "header_row": 31,
+        "data_columns": "Agente:Empresa,Débito/Crédito:Situacao,Valor a Liquidar (R$):Valor"
     },
     "LFN001": {
         "sheet_dados": "LFN004 - Liquidação Financeira ",
