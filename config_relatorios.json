@@ -9,13 +9,13 @@
         "data_columns": "Agente:Empresa,Garantia Avulsa (R$):Valor"
     },
     "SUM001": {
-        "excel_dados": "C:\\Users\\malik.mourad\\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\\GE - ECE\\DGCA\\DGA\\CCEE\\Relatórios CCEE\\2025\\202506\\Garantia Financeira\\GFN003 - Excel\\ELECTRA_ENERGY_GFN003_jun_25.xlsx",
+        "excel_dados": "C:\\Users\\malik.mourad\\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\\GE - ECE\\DGCA\\DGA\\CCEE\\Relatórios CCEE\\2025\\202506\\Liquidação Financeira\\LFN004\\ELECTRA ENERGY LFN004 jun.25.xlsx",
         "excel_contatos": "C:\\Users\\malik.mourad\\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\\GE - ECE\\DGCA\\DGC\\Macro\\Contatos de E-mail para Macros.xlsx",
-        "pdfs_dir": "C:\\Users\\malik.mourad\\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\\GE - ECE\\DGCA\\DGA\\CCEE\\Relatórios CCEE\\2025\\202506\\Sumário\\SUM001 - Memória_de_Cálculo",
-        "sheet_dados": "GFN003 - Garantia Financeira po",
+        "pdfs_dir": "C:\\Users\\malik.mourad\\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\\GE - ECE\\DGCA\\DGA\\CCEE\\Relatórios CCEE\\2025\\202506\\Sumário\\SUM001",
+        "sheet_dados": "LFN004 - Liquidação Financeira ",
         "sheet_contatos": "Planilha1",
-        "header_row": 30,
-        "data_columns": "Agente:Empresa,Garantia Avulsa (R$):Valor"
+        "header_row": 31,
+        "data_columns": "Agente:Empresa,Débito/Crédito:Situacao,Valor a Liquidar (R$):Valor"
     },
     "LFN001": {
         "excel_dados": "C:\\Users\\malik.mourad\\ELECTRA COMERCIALIZADORA DE ENERGIA S.A\\GE - ECE\\DGCA\\DGA\\CCEE\\Relatórios CCEE\\2025\\202505\\Liquidação Financeira\\LFN004\\ELECTRA ENERGY LFN004 mai.25.xlsx",

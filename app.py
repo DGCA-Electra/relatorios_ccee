@@ -223,9 +223,9 @@ def main():
     # Tela de login
     if 'login_usuario' not in st.session_state or not st.session_state['login_usuario']:
         with st.form("login_form"):
-            st.subheader("Identificação do Usuário")
+            st.subheader("Login")
             login_usuario = st.text_input(
-                "Informe seu login de rede (ex: malik.sobrenome)",
+                "Informe seu login de rede (ex: nome.sobrenome)",
                 value='',
                 key="login_usuario_input_form",
                 help="Digite apenas o seu login de rede, sem @dominio."

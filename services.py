@@ -77,6 +77,8 @@ def _format_currency(value) -> str:
 def _format_date(date_value) -> str:
     """Formata um valor de data para dd/mm/YYYY, tratando possíveis erros."""
     try:
+        if date_value is None or pd.isna(date_value):
+            return "Data não informada"
         return pd.to_datetime(date_value).strftime('%d/%m/%Y')
     except (ValueError, TypeError):
         return "Data Inválida"
@@ -107,16 +109,40 @@ def handle_gfn001(row: pd.Series, cfg: dict, common: dict):
     
     gfn_path = Path(cfg['pdfs_dir']) / filename_gfn
     
+    # Buscar configuração do SUM001 para anexar o PDF da memória de cálculo
     all_configs = load_configs()
     sum001_cfg = all_configs.get('SUM001')
-    sum_path = Path(sum001_cfg['pdfs_dir']) / filename_sum if sum001_cfg else None
     
-    attachments = [gfn_path, sum_path]
+    attachments = [gfn_path]
+    sum_path = None
     
+    if sum001_cfg and 'pdfs_dir' in sum001_cfg:
+        sum_path = Path(sum001_cfg['pdfs_dir']) / filename_sum
+        attachments.append(sum_path)
+    else:
+        warnings.append("Configuração do SUM001 não encontrada para anexar PDF da memória de cálculo")
+    
+    # Verificar existência dos anexos
     if not gfn_path.exists():
         warnings.append(f"O anexo GFN001 não foi encontrado. Caminho procurado: {gfn_path}")
-    if not sum_path or not sum_path.exists():
-        warnings.append(f"O anexo SUM001 não foi encontrado. Caminho procurado: {sum_path}")
+    
+    if sum_path and not sum_path.exists():
+        warnings.append(f"O anexo SUM001 (memória de cálculo) não foi encontrado. Caminho procurado: {sum_path}")
+        # Tentar buscar em diretório alternativo se o caminho padrão não existir
+        try:
+            import streamlit as st
+            raiz_sharepoint = st.session_state.get('raiz_sharepoint', '')
+            if raiz_sharepoint:
+                # Tentar caminho alternativo para memória de cálculo
+                alt_sum_path = Path(raiz_sharepoint) / common['year'] / f"{common['year']}{common['month_num']}" / "Sumário" / "SUM001 - Memória_de_Cálculo" / filename_sum
+                if alt_sum_path.exists():
+                    attachments = [gfn_path, alt_sum_path]
+                    warnings.remove(f"O anexo SUM001 (memória de cálculo) não foi encontrado. Caminho procurado: {sum_path}")
+                    warnings.append(f"PDF da memória de cálculo encontrado em caminho alternativo: {alt_sum_path}")
+                else:
+                    warnings.append(f"PDF da memória de cálculo não encontrado em caminho alternativo: {alt_sum_path}")
+        except Exception as e:
+            warnings.append(f"Erro ao tentar caminho alternativo para PDF da memória de cálculo: {e}")
 
     warning_html = _create_warning_html(warnings)
 
@@ -136,6 +162,8 @@ def handle_gfn001(row: pd.Series, cfg: dict, common: dict):
 def handle_sum001(row: pd.Series, cfg: dict, common: dict):
     warnings = []
     valor = row.get('Valor', 0)
+    situacao = row.get('Situacao', '')
+    
     if valor == 0:
         warnings.append("O valor a liquidar é zero. O e-mail foi gerado para conferência.")
 
@@ -146,13 +174,44 @@ def handle_sum001(row: pd.Series, cfg: dict, common: dict):
 
     warning_html = _create_warning_html(warnings)
     
-    data_liquidacao = _format_date(row['Data'])
-    if valor > 0:
+    try:
+        import streamlit as st
+        df_raw = pd.read_excel(Path(cfg['excel_dados']), sheet_name=cfg['sheet_dados'], header=None)
+        # Linha 24: Data do Débito (Coluna A) e Data do Crédito (Coluna B)
+        data_debito_quadro1 = df_raw.iloc[23, 0]  # Linha 24, Coluna A (índice 23, 1)
+        data_credito_quadro1 = df_raw.iloc[23, 1]  # Linha 24, Coluna B (índice 23, 2)
+    except Exception as e:
+        warnings.append(f"Erro ao extrair datas do Quadro 1: {e}")
+        data_debito_quadro1 = None
+        data_credito_quadro1 = None
+    
+    # Determinar se é débito ou crédito baseado na coluna Situacao
+    if situacao == 'Crédito':
         texto1 = "crédito"
+        # Usar Data do Crédito do Quadro 1
+        if data_credito_quadro1 is not None and not pd.isna(data_credito_quadro1):
+            data_liquidacao = _format_date(data_credito_quadro1)
+        else:
+            # Fallback: usar data padrão ou data atual
+            from datetime import datetime
+            data_liquidacao = datetime.now().strftime('%d/%m/%Y')
         texto2 = "ressaltamos que esse crédito está sujeito ao rateio da eventual inadimplência observada no processo de liquidação financeira da Câmara. Dessa forma, caso o valor não seja creditado na íntegra, o mesmo será incluído no próximo ciclo de contabilização e liquidação financeira, estando o agente sujeito a um novo rateio de inadimplência, conforme Resolução ANEEL nº 552, de 14/10/2002."
-    else:
+    elif situacao == 'Débito':
         texto1 = "débito"
+        # Usar Data do Débito do Quadro 1
+        if data_debito_quadro1 is not None and not pd.isna(data_debito_quadro1):
+            data_liquidacao = _format_date(data_debito_quadro1)
+        else:
+            # Fallback: usar data padrão ou data atual
+            from datetime import datetime
+            data_liquidacao = datetime.now().strftime('%d/%m/%Y')
         texto2 = "teoricamente a conta possui o saldo necessário, visto que o aporte financeiro foi solicitado anteriormente. No entanto, a fim de evitar qualquer penalidade junto à CCEE, orientamos a verificação do saldo e também que o aporte de qualquer diferença seja efetuado com 1 (um) dia útil de antecedência da data da liquidação financeira."
+    else:
+        warnings.append(f"Situação '{situacao}' não reconhecida. Usando data atual como fallback.")
+        from datetime import datetime
+        data_liquidacao = datetime.now().strftime('%d/%m/%Y')
+        texto1 = "transação"
+        texto2 = "verifique os dados na planilha."
 
     subject = f"SUM001 - Sumário da Liquidação Financeira - {row['Empresa']} - {common['month_num']}/{common['year']}"
     body = f"""{warning_html}
@@ -305,7 +364,7 @@ def montar_caminhos(tipo, ano, mes, raiz):
     ano_2dig = ano[-2:]  # 25, 26, etc.
     
     # Padrões baseados no config_relatorios.json
-    if tipo in ["GFN001", "SUM001", "LEMBRETE"]:
+    if tipo in ["GFN001", "LEMBRETE"]:
         pasta_base = "Garantia Financeira"
         subpasta = "GFN003 - Excel"
         nome_arquivo = f"ELECTRA_ENERGY_GFN003_{mes_abrev}_{ano_2dig}.xlsx"
@@ -313,11 +372,16 @@ def montar_caminhos(tipo, ano, mes, raiz):
         
         if tipo == "GFN001":
             pdfs_dir = os.path.join(raiz, ano, ano_mes, pasta_base, "GFN001")
-        elif tipo == "SUM001":
-            pdfs_dir = os.path.join(raiz, ano, ano_mes, "Sumário", "SUM001 - Memória_de_Cálculo")
         else:  # LEMBRETE
             pdfs_dir = os.path.join(raiz, ano, ano_mes, pasta_base, "GFN001")
             
+    elif tipo == "SUM001":
+        pasta_base = "Liquidação Financeira"
+        subpasta = "LFN004"
+        nome_arquivo = f"ELECTRA ENERGY LFN004 {mes_abrev}.{ano_2dig}.xlsx"
+        excel_dados = os.path.join(raiz, ano, ano_mes, pasta_base, subpasta, nome_arquivo)
+        pdfs_dir = os.path.join(raiz, ano, ano_mes, "Sumário", "SUM001")
+        
     elif tipo == "LFN001":
         pasta_base = "Liquidação Financeira"
         subpasta = "LFN004"
@@ -366,11 +430,17 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> li
     cfg = all_configs.get(report_type)
     if not cfg: raise ReportProcessingError(f"'{report_type}' não encontrado nas configs.")
 
-    # Montar caminhos automaticamente
-    excel_dados, excel_contatos, pdfs_dir = montar_caminhos(report_type, year, month, raiz_sharepoint)
-    cfg['excel_dados'] = excel_dados
-    cfg['excel_contatos'] = excel_contatos
-    cfg['pdfs_dir'] = pdfs_dir
+    # Montar caminhos automaticamente apenas para relatórios que não são SUM001
+    if report_type != "SUM001":
+        excel_dados, excel_contatos, pdfs_dir = montar_caminhos(report_type, year, month, raiz_sharepoint)
+        cfg['excel_dados'] = excel_dados
+        cfg['excel_contatos'] = excel_contatos
+        cfg['pdfs_dir'] = pdfs_dir
+    else:
+        # Para SUM001, usar a configuração do arquivo JSON que já está correta
+        # Apenas atualizar o arquivo de contatos se necessário
+        if not cfg.get('excel_contatos'):
+            cfg['excel_contatos'] = st.session_state.get('contratos_email_path', '')
 
     try:
         header = int(cfg.get('header_row', 0))
@@ -451,10 +521,19 @@ def preview_dados(report_type: str, analyst: str, month: str, year: str):
     cfg = all_configs.get(report_type)
     if not cfg:
         raise ReportProcessingError(f"'{report_type}' não encontrado nas configs.")
-    excel_dados, excel_contatos, pdfs_dir = montar_caminhos(report_type, year, month, raiz_sharepoint)
-    cfg['excel_dados'] = excel_dados
-    cfg['excel_contatos'] = excel_contatos
-    cfg['pdfs_dir'] = pdfs_dir
+    
+    # Montar caminhos automaticamente apenas para relatórios que não são SUM001
+    if report_type != "SUM001":
+        excel_dados, excel_contatos, pdfs_dir = montar_caminhos(report_type, year, month, raiz_sharepoint)
+        cfg['excel_dados'] = excel_dados
+        cfg['excel_contatos'] = excel_contatos
+        cfg['pdfs_dir'] = pdfs_dir
+    else:
+        # Para SUM001, usar a configuração do arquivo JSON que já está correta
+        # Apenas atualizar o arquivo de contatos se necessário
+        if not cfg.get('excel_contatos'):
+            cfg['excel_contatos'] = st.session_state.get('contratos_email_path', '')
+    
     try:
         header = int(cfg.get('header_row', 0))
         df_dados = pd.read_excel(Path(cfg['excel_dados']), sheet_name=cfg['sheet_dados'], header=header)
