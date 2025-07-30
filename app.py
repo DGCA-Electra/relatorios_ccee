@@ -155,7 +155,7 @@ def show_main_page() -> None:
                 display_columns['Data'] = 'Data'
         
         # Selecionar apenas as colunas que queremos mostrar
-        columns_to_show = list(display_columns.keys())
+        columns_to_show = [col for col in display_columns.keys() if col in df_to_show.columns]
         df_display = df_to_show[columns_to_show].copy()
         
         # Renomear colunas para exibição

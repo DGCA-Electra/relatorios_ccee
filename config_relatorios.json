@@ -17,25 +17,25 @@
         "header_row": 31,
         "data_columns": "Agente:Empresa,Débito/Crédito:Situacao,Valor a Liquidar (R$):ValorLiquidacao,Valor Liquidado (R$):ValorLiquidado,Inadimplência (R$):ValorInadimplencia"
     },
-    "LFRES": {
+    "LFRES001": {
         "sheet_dados": "LFRES002 - Liquidação de Energi",
         "sheet_contatos": "Planilha1",
         "header_row": 42,
         "data_columns": "Agente:Empresa,Data do Débito:Data,Valor do Débito (R$):Valor,Tipo Agente:TipoAgente"
     },
-    "LEMBRETE": {
+    "GFN - LEMBRETE": {
         "sheet_dados": "GFN003 - Garantia Financeira po",
         "sheet_contatos": "Planilha1",
         "header_row": 30,
         "data_columns": "Agente:Empresa,Garantia Avulsa (R$):Valor"
     },
-    "LFRCAP": {
+    "LFRCAP001": {
         "sheet_dados": "LFRCAP002 - Liquidação de Reser",
         "sheet_contatos": "Planilha1",
         "header_row": 30,
         "data_columns": "Agente:Empresa,Data do Débito:Data,Valor do Débito (R$):Valor"
     },
-    "RCAP": {
+    "RCAP002": {
         "sheet_dados": "Sheet1",
         "sheet_contatos": "Planilha1",
         "header_row": 4,
