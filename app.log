@@ -1,0 +1,2 @@
+2025-07-31 10:23:51,855 INFO: Erro inesperado em envio: process_reports() got an unexpected keyword argument 'df_email'
+2025-07-31 10:24:10,201 INFO: Erro inesperado em envio: process_reports() got an unexpected keyword argument 'df_email'

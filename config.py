@@ -1,5 +1,3 @@
-# seu_projeto/config.py
-
 import json
 import os
 from pathlib import Path
@@ -19,6 +17,17 @@ PATH_CONFIGS = {
     "sharepoint_root": "ELECTRA COMERCIALIZADORA DE ENERGIA S.A/GE - ECE/DGCA/DGA/CCEE/Relatórios CCEE",
     "contatos_email": "ELECTRA COMERCIALIZADORA DE ENERGIA S.A/GE - ECE/DGCA/DGC/Macro/Contatos de E-mail para Macros.xlsx",
     "user_base": "C:/Users"
+}
+
+# Mapeamento das colunas relevantes por tipo de relatório
+REPORT_DISPLAY_COLUMNS = {
+    "SUM001": ["Empresa", "Email", "Valor", "Data_Debito_Credito"],
+    "LFN001": ["Empresa", "Email", "ValorLiquidacao", "ValorLiquidado", "ValorInadimplencia"],
+    "GFN001": ["Empresa", "Email", "Valor"],
+    "LFRES001": ["Empresa", "Email", "Valor", "Data"],
+    "LFRCAP001": ["Empresa", "Email", "Valor", "Data"],
+    "RCAP002": ["Empresa", "Email", "Valor", "Data"],
+    "GFN - LEMBRETE": ["Empresa", "Email", "Valor"]
 }
 
 # Configurações padrão dos relatórios

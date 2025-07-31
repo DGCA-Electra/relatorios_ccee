@@ -360,22 +360,34 @@ def handle_lfn001(row: pd.Series, cfg: Dict[str, Any], common: Dict[str, Any]) -
     """
     warnings = []
     situacao = row.get('Situacao')
-    body = ""
-    
+    # Tratamento dos valores para garantir que não sejam nan/None
+    valor_liquidacao = row.get('ValorLiquidacao', 0)
+    valor_liquidado = row.get('ValorLiquidado', 0)
+    valor_inadimplencia = row.get('ValorInadimplencia', 0)
+    def safe_val(val):
+        if pd.isna(val) or val in [None, 0, 0.0, "0", "0.0", "nan", "None"]:
+            return 0
+        return val
+    valor_liquidacao = safe_val(valor_liquidacao)
+    valor_liquidado = safe_val(valor_liquidado)
+    valor_inadimplencia = safe_val(valor_inadimplencia)
+
     if situacao == 'Crédito':
-        body = f"""<p>Prezado (a),</p>
+        body = f"""
+        <p>Prezado (a),</p>
         <p>Segue anexo o relatório LFN001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao resultado da liquidação financeira de <strong>{common['month_long']}/{common['year']}</strong>. Este relatório demonstra a redução ocorrida no crédito da liquidação financeira decorrente do rateio das inadimplências dos agentes devedores da Câmara.</p>
         <p>Ressaltamos que no próximo ciclo de contabilização e liquidação financeira serão incluídos no resultado do agente todo e qualquer crédito não recebido, estando o agente sujeito a um novo rateio de inadimplência, conforme Resolução ANEEL nº 552, de 14/10/2002.</p>
-        <p>Valor a Liquidar do Agente: <strong>{_format_currency(row['ValorLiquidacao'])}</strong>.<br>
-        Valor Liquidado do Agente: <strong>{_format_currency(row['ValorLiquidado'])}</strong>.<br>
-        Participação do agente no rateio de inadimplências: <strong>{_format_currency(row['ValorInadimplencia'])}</strong>.</p>
+        <p>Valor a Liquidar do Agente: <strong>{_format_currency(valor_liquidacao)}</strong>.<br>
+        Valor Liquidado do Agente: <strong>{_format_currency(valor_liquidado)}</strong>.<br>
+        Participação do agente no rateio de inadimplências: <strong>{_format_currency(valor_inadimplencia)}</strong>.</p>
         <p>Estamos à disposição para mais informações.</p>"""
     elif situacao == 'Débito':
-        body = f"""<p>Prezado (a),</p>
+        body = f"""
+        <p>Prezado (a),</p>
         <p>Segue anexo o relatório LFN001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao resultado da liquidação financeira de <strong>{common['month_long']}/{common['year']}</strong>. Este relatório demonstra o valor debitado na liquidação financeira da CCEE.</p>
-        <p>Valor a Liquidar do Agente: <strong>{_format_currency(row['ValorLiquidacao'])}</strong>.<br>
-        Valor Liquidado do Agente: <strong>{_format_currency(row['ValorLiquidado'])}</strong>.<br>
-        Inadimplência: <strong>{_format_currency(row['ValorInadimplencia'])}</strong>.</p>
+        <p>Valor a Liquidar do Agente: <strong>{_format_currency(valor_liquidacao)}</strong>.<br>
+        Valor Liquidado do Agente: <strong>{_format_currency(valor_liquidado)}</strong>.<br>
+        Inadimplência: <strong>{_format_currency(valor_inadimplencia)}</strong>.</p>
         <p>Estamos à disposição para mais informações.</p>"""
     else:
         warnings.append(f"A situação ('{situacao}') não é 'Crédito' ou 'Débito'. Verifique a planilha.")

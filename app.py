@@ -4,6 +4,7 @@ import config
 import services
 import logging
 from typing import Dict, Any, Optional
+from config import REPORT_DISPLAY_COLUMNS
 
 # Configuração básica de logging
 logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
@@ -92,9 +93,15 @@ def show_main_page() -> None:
         if 'preview_data' not in st.session_state:
             st.error("❌ Primeiro visualize os dados antes de enviar os e-mails.")
             return
-            
         with st.spinner("Processando relatórios e gerando e-mails... Por favor, aguarde."):
             try:
+                # Tratamento global para valores nulos, NaN e zero antes do envio de e-mail
+                df_email = st.session_state.preview_data.copy()
+                for col in df_email.columns:
+                    if ("valor" in col.lower()) or (col in ["ValorLiquidacao", "ValorLiquidado", "ValorInadimplencia", "Valor"]):
+                        df_email[col] = df_email[col].apply(lambda x: "0" if pd.isna(x) or x in [None, 0, 0.0, "0", "0.0", "nan", "None"] else services._format_currency(x))
+                st.session_state.preview_data = df_email
+
                 results = services.process_reports(
                     report_type=tipo, 
                     analyst=analista, 
@@ -103,7 +110,6 @@ def show_main_page() -> None:
                     login_usuario=login_usuario
                 )
                 st.session_state.results = results
-                
                 created_count = results[-1]['created_count'] if results else 0
                 st.success(f'✅ {created_count} de {len(results)} e-mails foram gerados com sucesso! Verifique seu Outlook.')
 
@@ -123,50 +129,44 @@ def show_main_page() -> None:
     if 'preview_data' in st.session_state and st.session_state.preview_data is not None:
         df_filtered = st.session_state.preview_data
         form = st.session_state.form_data
-        
+
         st.header(f"📈 Dados para {form['tipo']} - {form['mes']}/{form['ano']} - {form['analista']}")
-        
+
         total_empresas = len(df_filtered)
-        
+
         col1, col2 = st.columns(2)
         col1.metric("Empresas Encontradas", total_empresas)
         col2.metric("Analista", form['analista'])
 
+
         # Preparar dados para exibição
         df_to_show = df_filtered.copy()
-        
-        # Renomear colunas para exibição
-        display_columns = {
-            'Empresa': 'Empresa',
-            'Email': 'E-mail',
-            'Valor': 'Valor'
-        }
-        
-        # Para SUM001, usar a coluna de data calculada
-        if form['tipo'] == 'SUM001' and 'Data_Debito_Credito' in df_to_show.columns:
-            display_columns['Data_Debito_Credito'] = 'Data Débito/Crédito'
-        else:
-            # Para outros relatórios, usar a coluna Data padrão
-            if 'Data' in df_to_show.columns:
-                display_columns['Data'] = 'Data'
-            else:
-                # Se não houver coluna Data, criar uma coluna vazia
-                df_to_show['Data'] = 'Data não informada'
-                display_columns['Data'] = 'Data'
-        
-        # Selecionar apenas as colunas que queremos mostrar
-        columns_to_show = [col for col in display_columns.keys() if col in df_to_show.columns]
+
+        # Selecionar colunas relevantes para o tipo de relatório
+        display_cols = REPORT_DISPLAY_COLUMNS.get(form['tipo'], ["Empresa", "Email", "Valor"])
+        columns_to_show = [col for col in display_cols if col in df_to_show.columns]
         df_display = df_to_show[columns_to_show].copy()
-        
-        # Renomear colunas para exibição
-        df_display.columns = [display_columns[col] for col in df_display.columns]
-        
-        # Formatar valores monetários
-        if 'Valor' in df_display.columns:
-            df_display['Valor'] = df_display['Valor'].apply(lambda x: services._format_currency(x) if pd.notna(x) else 'R$ 0,00')
-        
+
+        # Renomear colunas para exibição (opcional, se quiser nomes amigáveis)
+        rename_map = {
+            "Empresa": "Empresa",
+            "Email": "E-mail",
+            "Valor": "Valor",
+            "ValorLiquidacao": "Valor a Liquidar",
+            "ValorLiquidado": "Valor Liquidado",
+            "ValorInadimplencia": "Inadimplência",
+            "Data": "Data",
+            "Data_Debito_Credito": "Data Débito/Crédito"
+        }
+        df_display.columns = [rename_map.get(col, col) for col in df_display.columns]
+
+        # Tratamento global para valores nulos, NaN e zero em colunas de valor
+        for col in df_display.columns:
+            if ("valor" in col.lower()) or (col in ["Valor a Liquidar", "Valor Liquidado", "Inadimplência"]):
+                df_display[col] = df_display[col].apply(lambda x: "0" if pd.isna(x) or x in [None, 0, 0.0, "0", "0.0", "nan", "None"] else services._format_currency(x))
+
         st.dataframe(df_display, use_container_width=True, hide_index=True)
-        
+
         # Botão para limpar dados de visualização
         if st.button("🗑️ Limpar Visualização", key="limpar_preview"):
             del st.session_state.preview_data
