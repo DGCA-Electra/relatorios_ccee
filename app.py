@@ -25,24 +25,21 @@ def show_main_page() -> None:
     """Renderiza a página principal de envio de relatórios."""
     st.title("📊 Envio de Relatórios CCEE - DGCA")
     
-    # Mostrar indicador de modo de teste se estiver ativo
-    if st.session_state.get('analista_teste'):
-        st.warning(f"🧪 Modo de teste ativo: Testando como {st.session_state['analista_teste']}")
-        if st.button("Desativar modo de teste", key="desativar_teste_main"):
-            del st.session_state['analista_teste']
-            st.rerun()
+    st.info("💡 **Dica:** Você pode enviar relatórios para qualquer analista. Isso é útil durante férias ou ausências, quando um analista precisa enviar relatórios para outro.")
     
     all_configs = config.load_configs()
     report_types = list(all_configs.keys())
 
     with st.form("report_form"):
         st.subheader("Parâmetros de Envio")
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             tipo = st.selectbox("Tipo de Relatório", options=report_types, key="sb_tipo")
         with col2:
-            mes = st.selectbox("Mês", options=config.MESES, key="sb_mes")
+            analista = st.selectbox("Analista", options=config.ANALISTAS, key="sb_analista")
         with col3:
+            mes = st.selectbox("Mês", options=config.MESES, key="sb_mes")
+        with col4:
             ano = st.selectbox("Ano", options=config.ANOS, key="sb_ano")
         
         # Dois botões separados
@@ -52,12 +49,26 @@ def show_main_page() -> None:
         with col2:
             send_submitted = st.form_submit_button("📧 Enviar E-mails", use_container_width=True)
 
-    # Usar analista de teste se estiver ativo, senão usar o login do usuário
-    analista = st.session_state.get('analista_teste', st.session_state.get('login_usuario'))
-    login_usuario = st.session_state.get('login_usuario')
+    # Usar o analista selecionado
+    analista_final = analista
 
-    if not login_usuario:
-        st.error("❌ Login do usuário não encontrado. Faça login novamente.")
+    # Verificar se o analista é válido
+    if not analista_final or analista_final not in config.ANALISTAS:
+        st.error("❌ Analista inválido. Selecione um analista válido.")
+        return
+
+    # Verificar se o tipo de relatório é válido
+    if not tipo or tipo not in report_types:
+        st.error("❌ Tipo de relatório inválido. Selecione um tipo válido.")
+        return
+
+    # Verificar se o mês e ano são válidos
+    if not mes or mes not in config.MESES:
+        st.error("❌ Mês inválido. Selecione um mês válido.")
+        return
+
+    if not ano or ano not in config.ANOS:
+        st.error("❌ Ano inválido. Selecione um ano válido.")
         return
 
     # Processar visualização de dados
@@ -66,15 +77,14 @@ def show_main_page() -> None:
             try:
                 df_filtered, df_preview = services.preview_dados(
                     report_type=tipo, 
-                    analyst=analista, 
+                    analyst=analista_final, 
                     month=mes, 
-                    year=ano,
-                    login_usuario=login_usuario
+                    year=ano
                 )
                 st.session_state.preview_data = df_filtered
-                st.session_state.form_data = {'tipo': tipo, 'analista': analista, 'mes': mes, 'ano': ano}
+                st.session_state.form_data = {'tipo': tipo, 'analista': analista_final, 'mes': mes, 'ano': ano}
                 
-                st.success(f'✅ Dados carregados com sucesso! {len(df_filtered)} empresas encontradas para {analista}.')
+                st.success(f'✅ Dados carregados com sucesso! {len(df_filtered)} empresas encontradas para {analista_final}.')
 
             except services.ReportProcessingError as e:
                 st.error(f"❌ Erro de processamento: {e}")
@@ -90,9 +100,19 @@ def show_main_page() -> None:
 
     # Processar envio de e-mails
     if send_submitted:
-        if 'preview_data' not in st.session_state:
+        if 'preview_data' not in st.session_state or st.session_state.preview_data is None:
             st.error("❌ Primeiro visualize os dados antes de enviar os e-mails.")
             return
+        
+        # Verificar se os dados de preview correspondem aos parâmetros atuais
+        form_data = st.session_state.get('form_data', {})
+        if (form_data.get('tipo') != tipo or 
+            form_data.get('analista') != analista_final or 
+            form_data.get('mes') != mes or 
+            form_data.get('ano') != ano):
+            st.error("❌ Os dados de visualização não correspondem aos parâmetros atuais. Visualize os dados novamente.")
+            return
+            
         with st.spinner("Processando relatórios e gerando e-mails... Por favor, aguarde."):
             try:
                 # Tratamento global para valores nulos, NaN e zero antes do envio de e-mail
@@ -104,10 +124,9 @@ def show_main_page() -> None:
 
                 results = services.process_reports(
                     report_type=tipo, 
-                    analyst=analista, 
+                    analyst=analista_final, 
                     month=mes, 
-                    year=ano,
-                    login_usuario=login_usuario
+                    year=ano
                 )
                 st.session_state.results = results
                 created_count = results[-1]['created_count'] if results else 0
@@ -128,22 +147,26 @@ def show_main_page() -> None:
     # Mostrar dados de visualização
     if 'preview_data' in st.session_state and st.session_state.preview_data is not None:
         df_filtered = st.session_state.preview_data
-        form = st.session_state.form_data
+        form = st.session_state.get('form_data', {})
+        
+        if not form:
+            st.error("❌ Dados do formulário não encontrados.")
+            return
 
-        st.header(f"📈 Dados para {form['tipo']} - {form['mes']}/{form['ano']} - {form['analista']}")
+        st.header(f"📈 Dados para {form.get('tipo', 'N/A')} - {form.get('mes', 'N/A')}/{form.get('ano', 'N/A')} - {form.get('analista', 'N/A')}")
 
         total_empresas = len(df_filtered)
 
         col1, col2 = st.columns(2)
         col1.metric("Empresas Encontradas", total_empresas)
-        col2.metric("Analista", form['analista'])
+        col2.metric("Analista", form.get('analista', 'N/A'))
 
 
         # Preparar dados para exibição
         df_to_show = df_filtered.copy()
 
         # Selecionar colunas relevantes para o tipo de relatório
-        display_cols = REPORT_DISPLAY_COLUMNS.get(form['tipo'], ["Empresa", "Email", "Valor"])
+        display_cols = REPORT_DISPLAY_COLUMNS.get(form.get('tipo', ''), ["Empresa", "Email", "Valor"])
         columns_to_show = [col for col in display_cols if col in df_to_show.columns]
         df_display = df_to_show[columns_to_show].copy()
 
@@ -175,9 +198,13 @@ def show_main_page() -> None:
     # Mostrar resultados de envio
     if 'results' in st.session_state and st.session_state.results:
         results = st.session_state.results
-        form = st.session_state.form_data
+        form = st.session_state.get('form_data', {})
         
-        st.header(f"📤 Resultado do Envio - {form['tipo']} - {form['mes']}/{form['ano']} - {form['analista']}")
+        if not form:
+            st.error("❌ Dados do formulário não encontrados.")
+            return
+        
+        st.header(f"📤 Resultado do Envio - {form.get('tipo', 'N/A')} - {form.get('mes', 'N/A')}/{form.get('ano', 'N/A')} - {form.get('analista', 'N/A')}")
         
         total_processed = len(results)
         total_created = results[-1]['created_count'] if results else 0
@@ -186,12 +213,13 @@ def show_main_page() -> None:
         col1.metric("Empresas Processadas", total_processed)
         col2.metric("E-mails Criados", total_created)
 
-        df_results = pd.DataFrame(results)
-        df_to_show = df_results[['empresa', 'data', 'valor', 'email', 'anexos_count']].rename(columns={
-            'empresa': 'Empresa', 'data': 'Data Aporte', 'valor': 'Valor',
-            'email': 'E-mail', 'anexos_count': 'Anexos'
-        })
-        st.dataframe(df_to_show, use_container_width=True, hide_index=True)
+        if results:
+            df_results = pd.DataFrame(results)
+            df_to_show = df_results[['empresa', 'data', 'valor', 'email', 'anexos_count']].rename(columns={
+                'empresa': 'Empresa', 'data': 'Data Aporte', 'valor': 'Valor',
+                'email': 'E-mail', 'anexos_count': 'Anexos'
+            })
+            st.dataframe(df_to_show, use_container_width=True, hide_index=True)
         
         # Botão para limpar resultados
         if st.button("🗑️ Limpar Resultados", key="limpar_results"):
@@ -272,159 +300,19 @@ def show_config_page() -> None:
                 st.error(f"❌ Erro ao salvar configurações: {e}")
                 registrar_log(f"Erro ao salvar configurações: {e}")
 
-def show_test_page() -> None:
-    """Renderiza a página de teste de analistas."""
-    st.title("🧪 Teste de Analistas")
-    
-    st.info("Use esta página para testar o sistema como se fosse outro analista. Isso é útil para verificar se os dados estão sendo carregados corretamente para diferentes analistas.")
-    
-    # Mostrar status atual
-    if st.session_state.get('analista_teste'):
-        st.success(f"✅ **Modo de teste ativo:** {st.session_state['analista_teste']}")
-    
-    # Interface de teste
-    st.markdown("---")
-    st.subheader("🎯 Selecionar Analista para Teste")
-    
-    # Layout melhorado para seleção
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        analista_teste = st.selectbox(
-            "Selecione o analista:",
-            options=config.ANALISTAS,
-            key="analista_teste_select",
-            help="Escolha o analista cujo contexto você quer simular"
-        )
-    with col2:
-        st.markdown("")  # Espaçamento para alinhar com o selectbox
-        st.markdown("")  # Espaçamento adicional
-        if st.button("🔬 Ativar Teste", key="testar_analista_btn", use_container_width=True):
-            st.session_state['analista_teste'] = analista_teste
-            st.success(f"✅ Modo de teste ativado para: {analista_teste}")
-            st.info("Agora você pode usar a aba 'Envio de Relatórios' para testar como se fosse este analista.")
-            st.rerun()
-    
-    # Desativar teste
-    if st.session_state.get('analista_teste'):
-        st.markdown("---")
-        st.subheader("🛑 Gerenciar Modo de Teste")
-        
-        col1, col2, col3 = st.columns([2, 1, 1])
-        with col1:
-            st.warning(f"**Modo de teste ativo:** {st.session_state['analista_teste']}")
-        with col2:
-            st.markdown("")  # Espaçamento para alinhar
-            st.markdown("")  # Espaçamento adicional
-            if st.button("❌ Desativar Teste", key="desativar_teste_btn", use_container_width=True):
-                del st.session_state['analista_teste']
-                st.success("✅ Modo de teste desativado.")
-                st.rerun()
-        with col3:
-            st.markdown("")  # Espaçamento para alinhar
-            st.markdown("")  # Espaçamento adicional
-            if st.button("🔄 Limpar Cache", key="limpar_cache_btn", use_container_width=True):
-                st.session_state.clear()
-                st.success("✅ Cache limpo. Faça login novamente.")
-                st.rerun()
-
-def validate_login(login_usuario: str) -> bool:
-    """
-    Valida se o login do usuário é válido.
-    
-    Args:
-        login_usuario: Login do usuário
-        
-    Returns:
-        True se o login é válido, False caso contrário
-    """
-    if not login_usuario or not login_usuario.strip():
-        return False
-    
-    # Verificar se o login tem formato válido (nome.sobrenome)
-    if '.' not in login_usuario:
-        return False
-    
-    return True
-
-def get_user_paths(login_usuario: str) -> Dict[str, str]:
-    """
-    Obtém os caminhos do usuário usando a nova função do config.
-    
-    Args:
-        login_usuario: Login do usuário
-        
-    Returns:
-        Dicionário com os caminhos do usuário
-    """
-    try:
-        return config.get_user_paths(login_usuario)
-    except Exception as e:
-        st.error(f"Erro ao obter caminhos do usuário: {e}")
-        return {}
-
 def main() -> None:
     """Função principal da aplicação."""
     st.image("static/logo.png", width=250)
 
-    # Tela de login
-    if 'login_usuario' not in st.session_state or not st.session_state['login_usuario']:
-        with st.form("login_form"):
-            st.subheader("🔐 Login")
-            login_usuario = st.text_input(
-                "Informe seu login de rede (ex: nome.sobrenome)",
-                value='',
-                key="login_usuario_input_form",
-                help="Digite apenas o seu login de rede, sem @dominio."
-            )
-            submitted = st.form_submit_button("Entrar")
-            
-        if submitted and login_usuario:
-            login_clean = login_usuario.strip().lower()
-            
-            if not validate_login(login_clean):
-                st.error("❌ Formato de login inválido. Use o formato: nome.sobrenome")
-            else:
-                st.session_state['login_usuario'] = login_clean
-                
-                # Obter e validar caminhos do usuário
-                user_paths = get_user_paths(login_clean)
-                if user_paths:
-                    st.session_state['raiz_sharepoint'] = user_paths.get('raiz_sharepoint', '')
-                    st.session_state['contratos_email_path'] = user_paths.get('contratos_email_path', '')
-                    st.rerun()
-                else:
-                    st.error("❌ Não foi possível configurar os caminhos do usuário.")
-        
-        st.stop()
-
-    # Botão de logout com key único
-    if st.sidebar.button("🚪 Logout", key="logout_btn"):
-        st.session_state['login_usuario'] = ''
-        st.rerun()
-
-    # Verificar se os caminhos estão configurados
-    login_usuario = st.session_state.get('login_usuario')
-    if not st.session_state.get('raiz_sharepoint') or not st.session_state.get('contratos_email_path'):
-        user_paths = get_user_paths(login_usuario)
-        if user_paths:
-            st.session_state['raiz_sharepoint'] = user_paths.get('raiz_sharepoint', '')
-            st.session_state['contratos_email_path'] = user_paths.get('contratos_email_path', '')
-
-    # Se for admin, mostra navegação
-    if st.session_state['login_usuario'] == 'malik.mourad':
-        st.sidebar.title("🧭 Navegação")
-        page_options = ["Envio de Relatórios", "Configurações", "Teste de Analistas"]
-        page = st.sidebar.radio("Escolha a página:", page_options, label_visibility="hidden", key="sidebar_radio")
-        
-        if page == "Envio de Relatórios":
-            show_main_page()
-        elif page == "Configurações":
-            show_config_page()
-        else:  # Teste de Analistas
-            show_test_page()
-    else:
-        # Usuário comum só vê a tela principal, sem navegação lateral
+    # Navegação principal
+    st.sidebar.title("🧭 Navegação")
+    page_options = ["Envio de Relatórios", "Configurações"]
+    page = st.sidebar.radio("Escolha a página:", page_options, label_visibility="hidden", key="sidebar_radio")
+    
+    if page == "Envio de Relatórios":
         show_main_page()
+    else:  # Configurações
+        show_config_page()
 
 if __name__ == "__main__":
     main()

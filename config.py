@@ -104,24 +104,24 @@ DEFAULT_CONFIGS = {
     }
 }
 
-def get_user_paths(login_usuario: str) -> Dict[str, str]:
+def get_user_paths() -> Dict[str, str]:
     """
-    Gera os caminhos baseados no login do usuário.
+    Gera os caminhos padrão para o sistema.
     
-    Args:
-        login_usuario: Login do usuário (ex: malik.mourad)
-        
     Returns:
-        Dicionário com os caminhos configurados para o usuário
+        Dicionário com os caminhos configurados
     """
-    user_base = f"{PATH_CONFIGS['user_base']}/{login_usuario}"
+    # Usar caminho padrão fixo baseado no usuário atual do sistema
+    import os
+    current_user = os.getenv('USERNAME', 'malik.mourad')  # Fallback para malik.mourad
+    user_base = f"{PATH_CONFIGS['user_base']}/{current_user}"
     
     return {
         "raiz_sharepoint": f"{user_base}/{PATH_CONFIGS['sharepoint_root']}",
         "contratos_email_path": f"{user_base}/{PATH_CONFIGS['contatos_email']}"
     }
 
-def build_report_paths(report_type: str, ano: str, mes: str, login_usuario: str) -> Dict[str, str]:
+def build_report_paths(report_type: str, ano: str, mes: str) -> Dict[str, str]:
     """
     Constrói os caminhos específicos para um relatório.
     
@@ -129,7 +129,6 @@ def build_report_paths(report_type: str, ano: str, mes: str, login_usuario: str)
         report_type: Tipo do relatório (ex: GFN001)
         ano: Ano do relatório (ex: 2025)
         mes: Mês do relatório (ex: JUNHO)
-        login_usuario: Login do usuário
         
     Returns:
         Dicionário com os caminhos do relatório
@@ -150,7 +149,7 @@ def build_report_paths(report_type: str, ano: str, mes: str, login_usuario: str)
     ano_2dig = ano[-2:]  # 25, 26, etc.
     
     # Obter caminhos do usuário
-    user_paths = get_user_paths(login_usuario)
+    user_paths = get_user_paths()
     
     # Obter template de caminhos do relatório
     path_template = DEFAULT_CONFIGS[report_type].get("path_template", {})
