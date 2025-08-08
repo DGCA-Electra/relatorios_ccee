@@ -25,7 +25,7 @@
         "header_row": 31,
         "data_columns": "Agente:Empresa,Débito/Crédito:Situacao,Valor a Liquidar (R$):ValorLiquidacao,Valor Liquidado (R$):ValorLiquidado,Inadimplência (R$):ValorInadimplencia",
         "path_template": {
-            "excel_dados": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação Financeira/LFN004/ELECTRA ENERGY LFN004 {mes_abrev}.{ano_2dig}.xlsx",
+            "excel_dados": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação Financeira/LFN004/ELECTRA ENERGY LFN004 {mes_abrev}.{ano_2dig} (pós).xlsx",
             "pdfs_dir": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação Financeira/LFN001"
         }
     },
