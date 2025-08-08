@@ -12,7 +12,7 @@ Este projeto automatiza o processo de envio de relatórios da Câmara de Comerci
 - **Múltiplos Tipos de Relatório**: Suporte a GFN001, SUM001, LFN001, LFRES, LEMBRETE, LFRCAP, RCAP
 - **Interface Web**: Interface amigável desenvolvida em Streamlit
 - **Configuração Flexível**: Sistema de configuração via JSON
-- **Modo de Teste**: Possibilidade de testar como diferentes analistas
+- **Envio Multi-Analista**: Possibilidade de enviar relatórios para qualquer analista
 - **Tratamento de Erros**: Sistema robusto de tratamento de erros
 
 ## 🛠️ Tecnologias Utilizadas
@@ -162,9 +162,9 @@ Cada tipo de relatório pode ser configurado através da interface web ou direta
 - Filtrará por analista responsável
 - Gerará e-mails no Outlook para revisão
 
-### 4. Modo de Teste (Admin)
-- Administradores podem testar como outros analistas
-- Útil para verificar dados e configurações
+### 4. Envio Multi-Analista
+- Qualquer usuário pode enviar relatórios para qualquer analista
+- Útil durante férias ou ausências, quando um analista precisa enviar relatórios para outro
 
 ## ⚙️ Configurações Avançadas
 

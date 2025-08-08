@@ -529,10 +529,10 @@ REPORT_HANDLERS = {
     'GFN001': handle_gfn001, 
     'SUM001': handle_sum001, 
     'LFN001': handle_lfn001,
-    'LFRES': handle_lfres, 
-    'LEMBRETE': handle_lembrete, 
-    'LFRCAP': handle_lfrcap, 
-    'RCAP': handle_rcap
+    'LFRES001': handle_lfres, 
+    'GFN - LEMBRETE': handle_lembrete, 
+    'LFRCAP001': handle_lfrcap, 
+    'RCAP002': handle_rcap
 }
 
 # ==============================================================================
@@ -568,13 +568,12 @@ def _calculate_sum001_dates(cfg: Dict[str, Any], situacao: str) -> str:
     except Exception as e:
         return f"Erro ao calcular data: {e}"
 
-def _load_and_process_data(cfg: Dict[str, Any], login_usuario: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def _load_and_process_data(cfg: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Carrega e processa dados das planilhas.
     
     Args:
         cfg: Configuração do relatório
-        login_usuario: Login do usuário
         
     Returns:
         Tupla com (DataFrame de dados, DataFrame de contatos)
@@ -606,7 +605,7 @@ def _load_and_process_data(cfg: Dict[str, Any], login_usuario: str) -> Tuple[pd.
 
     return df_dados, df_contatos
 
-def process_reports(report_type: str, analyst: str, month: str, year: str, login_usuario: str) -> List[Dict[str, Any]]:
+def process_reports(report_type: str, analyst: str, month: str, year: str) -> List[Dict[str, Any]]:
     """
     Processa relatórios e gera e-mails.
     
@@ -615,7 +614,6 @@ def process_reports(report_type: str, analyst: str, month: str, year: str, login
         analyst: Analista responsável
         month: Mês do relatório
         year: Ano do relatório
-        login_usuario: Login do usuário
         
     Returns:
         Lista com resultados do processamento
@@ -623,9 +621,6 @@ def process_reports(report_type: str, analyst: str, month: str, year: str, login
     Raises:
         ReportProcessingError: Se houver erro no processamento
     """
-    if not login_usuario:
-        raise ReportProcessingError("Login do usuário não informado.")
-    
     all_configs = load_configs()
     cfg = all_configs.get(report_type)
     if not cfg: 
@@ -633,13 +628,13 @@ def process_reports(report_type: str, analyst: str, month: str, year: str, login
 
     # Construir caminhos dinamicamente
     try:
-        report_paths = build_report_paths(report_type, year, month, login_usuario)
+        report_paths = build_report_paths(report_type, year, month)
         cfg.update(report_paths)
     except ValueError as e:
         raise ReportProcessingError(f"Erro ao construir caminhos: {e}")
 
     # Carregar e processar dados
-    df_dados, df_contatos = _load_and_process_data(cfg, login_usuario)
+    df_dados, df_contatos = _load_and_process_data(cfg)
     
     # Filtrar dados por analista
     df_merged = pd.merge(df_dados, df_contatos, on='Empresa', how='left')
@@ -690,6 +685,7 @@ def process_reports(report_type: str, analyst: str, month: str, year: str, login
             print(f"Erro ao processar linha para {row.get('Empresa', 'Empresa desconhecida')}: {e}")
             continue
         
+        # Adicionar resultado mesmo se email_data for None (como no caso do lembrete)
         if email_data:
             created_count += 1
             assinatura = f"<br><br><p>Atenciosamente,</p><p><strong>{analyst}</strong></p>"
@@ -708,7 +704,7 @@ def process_reports(report_type: str, analyst: str, month: str, year: str, login
     
     return results
 
-def preview_dados(report_type: str, analyst: str, month: str, year: str, login_usuario: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def preview_dados(report_type: str, analyst: str, month: str, year: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Pré-visualiza dados de um relatório.
     
@@ -717,7 +713,6 @@ def preview_dados(report_type: str, analyst: str, month: str, year: str, login_u
         analyst: Analista responsável
         month: Mês do relatório
         year: Ano do relatório
-        login_usuario: Login do usuário
         
     Returns:
         Tupla com (DataFrame completo, DataFrame de preview)
@@ -725,9 +720,6 @@ def preview_dados(report_type: str, analyst: str, month: str, year: str, login_u
     Raises:
         ReportProcessingError: Se houver erro no processamento
     """
-    if not login_usuario:
-        raise ReportProcessingError("Login do usuário não informado.")
-    
     all_configs = load_configs()
     cfg = all_configs.get(report_type)
     if not cfg:
@@ -735,13 +727,13 @@ def preview_dados(report_type: str, analyst: str, month: str, year: str, login_u
     
     # Construir caminhos dinamicamente
     try:
-        report_paths = build_report_paths(report_type, year, month, login_usuario)
+        report_paths = build_report_paths(report_type, year, month)
         cfg.update(report_paths)
     except ValueError as e:
         raise ReportProcessingError(f"Erro ao construir caminhos: {e}")
 
     # Carregar e processar dados
-    df_dados, df_contatos = _load_and_process_data(cfg, login_usuario)
+    df_dados, df_contatos = _load_and_process_data(cfg)
     
     # Filtrar dados por analista
     df_merged = pd.merge(df_dados, df_contatos, on='Empresa', how='left')
