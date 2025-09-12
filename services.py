@@ -6,6 +6,7 @@ import sys
 import pythoncom
 from datetime import timedelta, datetime
 import re
+import streamlit as st
 import os
 from typing import Dict, List, Any, Optional, Tuple
 
@@ -167,10 +168,27 @@ def _load_excel_data(excel_path: str, sheet_name: str, header_row: int) -> pd.Da
     try:
         if not Path(excel_path).exists():
             raise FileNotFoundError(f"Arquivo não encontrado: {excel_path}")
+
+        # Verificar permissões de acesso
+        try:
+            with open(excel_path, 'rb') as _:
+                pass
+        except PermissionError:
+            error_msg = (
+                f"Erro de permissão ao acessar o arquivo: {excel_path}\n"
+                "Por favor, verifique:\n"
+                "1. Se o arquivo não está aberto em outro programa\n"
+                "2. Se o OneDrive/SharePoint finalizou a sincronização do arquivo\n"
+                "3. Se você tem permissões de acesso ao arquivo\n"
+                "4. Se necessário, tente fechar e reabrir o programa"
+            )
+            raise PermissionError(error_msg)
         
         df = pd.read_excel(Path(excel_path), sheet_name=sheet_name, header=header_row)
         return df
     except FileNotFoundError:
+        raise
+    except PermissionError:
         raise
     except ValueError as e:
         if "sheet" in str(e).lower():
@@ -415,25 +433,43 @@ def handle_lfres(row: pd.Series, cfg: Dict[str, Any], common: Dict[str, Any]) ->
         Dicionário com dados do e-mail
     """
     warnings = []
-    valor, data_debito, tipo_agente = row.get('Valor', 0), _format_date(row['Data']), row.get('TipoAgente')
+    valor = row.get('Valor', 0)
+    tipo_agente = row.get('TipoAgente')
+    data = _format_date(row.get('Data'))
+    
+    filename = _build_filename(row['Empresa'], 'LFRES001', common['month'], common['year'])
+    attachment, attachment_warnings = _find_attachment(cfg['pdfs_dir'], filename)
+    warnings.extend(attachment_warnings)
+    
+    warning_html = _create_warning_html(warnings)
+    
+    # Não gerar email para Gerador-EER com valor zero
+    if valor == 0 and tipo_agente == 'Gerador-EER':
+        return None
+        
     body = ""
+    subject = f"LFRES001 - Liquidação energia de reserva à CCEE - {row['Empresa']} - {common['month_num']}/{common['year']}"
     
     if valor != 0:
-        texto_base = "referente ao pagamento de ressarcimento pela energia contratada não entregue." if tipo_agente == 'Gerador-EER' else f"referente a Liquidação de Energia de Reserva de {common['month_long']}/{common['year']}."
-        body = f"""<p>Prezado(a),</p>
-        <p>Segue anexo o relatório LFRES0{common['month_num']}, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, {texto_base}</p>
-        <p>O valor do Encargo de Energia de Reserva - EER a ser debitado da sua conta no Departamento de Ações e Custódia (DAC) do Banco Bradesco é de <strong>{_format_currency(valor)}</strong> e deverá estar disponível independentemente do valor do Aporte de Garantia Financeira.</p>
-        <p>A data do débito será no dia <strong>{data_debito}</strong>. Recomendamos que o valor seja disponibilizado com 1 (um) dia útil de antecedência.</p>
-        <p>Estamos à disposição para mais informações.</p>"""
-    else:
         if tipo_agente == 'Gerador-EER':
-             warnings.append("O valor para 'Gerador-EER' é zero. O e-mail foi gerado para conferência, mas normalmente não seria enviado.")
+            body = f"""<p>Prezado(a),</p>
+            <p>Segue anexo o relatório LFRES001 - Liquidação de Energia de Reserva de <strong>{common['month_long']}/{common['year']}</strong>, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao pagamento de ressarcimento pela energia contratada não entregue.</p>
+            <p>O valor do Encargo de Energia de Reserva - EER a ser debitado da sua conta no Departamento de Ações e Custódia (DAC) do Banco Bradesco é de <strong>{_format_currency(valor)}</strong> e deverá estar disponível independentemente do valor do Aporte de Garantia Financeira.</p>
+            <p>A data do débito será no dia <strong>{data}</strong>. Recomendamos que o valor seja disponibilizado com 1 (um) dia útil de antecedência.</p>
+            <p>Estamos à disposição para mais informações.</p>"""
+        else:
+            body = f"""<p>Prezado(a),</p>
+            <p>Segue anexo o relatório LFRES001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente a Liquidação de Energia de Reserva de {common['month_long']}/{common['year']}.</p>
+            <p>O valor do Encargo de Energia de Reserva - EER a ser debitado da sua conta no Departamento de Ações e Custódia (DAC) do Banco Bradesco é de <strong>{_format_currency(valor)}</strong> e deverá estar disponível independentemente do valor do Aporte de Garantia Financeira.</p>
+            <p>A data do débito será no dia <strong>{data}</strong>. Recomendamos que o valor seja disponibilizado com 1 (um) dia útil de antecedência.</p>
+            <p>Estamos à disposição para mais informações.</p>"""
+    else:
         body = f"""<p>Prezado(a),</p>
-        <p>Segue anexo o relatório LFRES0{common['month_num']}, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente a Liquidação Financeira de Energia de Reserva de <strong>{common['month_long']}/{common['year']}</strong>.</p>
-        <p>Para esse mês os recursos disponíveis na Conta de Energia de Reserva - CONER são suficientes para o pagamento de todas as obrigações vinculadas à energia de reserva, portanto, não será realizada a cobrança do Encargo de Energia de Reserva - EER no dia <strong>{data_debito}</strong>.</p>
+        <p>Segue anexo o relatório LFRES001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente a Liquidação Financeira de Energia de Reserva de <strong>{common['month_long']}/{common['year']}</strong>.</p>
+        <p>Para esse mês os recursos disponíveis na Conta de Energia de Reserva - CONER são suficientes para o pagamento de todas as obrigações vinculadas à energia de reserva, portanto, não será realizada a cobrança do Encargo de Energia de Reserva - EER no dia <strong>{data}</strong>.</p>
         <p>Estamos à disposição para mais informações.</p>"""
     
-    filename = _build_filename(row['Empresa'], f"LFRES0{common['month_num']}", common['month'], common['year'])
+    filename = _build_filename(row['Empresa'], 'LFRES001', common['month'], common['year'])
     attachment, attachment_warnings = _find_attachment(cfg['pdfs_dir'], filename)
     warnings.extend(attachment_warnings)
     
@@ -704,6 +740,7 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> Li
     
     return results
 
+@st.cache_data(show_spinner=True)
 def preview_dados(report_type: str, analyst: str, month: str, year: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Pré-visualiza dados de um relatório.
