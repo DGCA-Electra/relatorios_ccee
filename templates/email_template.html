@@ -1,0 +1,18 @@
+"""
+templates/email_template.html
+Template HTML para corpo de e-mail de relatório.
+"""
+<html>
+  <body>
+    <p>Prezado(a) {{ analista }},</p>
+    <p>Segue o relatório referente à empresa <b>{{ empresa }}</b>:</p>
+    <ul>
+      <li><b>Tipo do Agente:</b> {{ tipo_agente }}</li>
+      <li><b>Valor:</b> {{ valor }}</li>
+      <li><b>Data:</b> {{ data }}</li>
+      <li><b>Situação:</b> {{ situacao }}</li>
+      <li><b>E-mail:</b> {{ email }}</li>
+    </ul>
+    <p>Atenciosamente,<br>{{ analista }}</p>
+  </body>
+</html>
