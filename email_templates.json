@@ -6,33 +6,59 @@
       "SUM: https://.../{ano}/{ano}{mes}/Sum%C3%A1rio/SUM001 - Mem%C3%B3ria_de_C%C3%A1lculo/{arquivo}.pdf"
     ],
     "body_html": "<p>Prezado(a),</p><p>Seguem anexos os relatórios GFN001 e SUM001, que apresentam a Memória de Cálculo de Garantias Financeiras, com os valores para aporte referentes à contabilização do mês de <strong>{mesext}/{ano}</strong>.</p><p>A data para realização do aporte é <strong>{dataaporte}</strong>. O saldo necessário deverá ser maior ou igual a <strong>R$ {valor}</strong>.</p><p>Observação: Quadro X - Valor da Garantia Financeira Avulsa = ((Total Necessário Preliminar - Ajuste) * 5%).</p><p>Atenciosamente,<br>{assinatura}</p>",
-    "placeholders": ["empresa","mes","ano","mesext","dataaporte","valor","arquivo","arquivo2","assinatura"],
+    "placeholders": [
+      "empresa",
+      "mes",
+      "ano",
+      "mesext",
+      "dataaporte",
+      "valor",
+      "arquivo",
+      "arquivo2",
+      "assinatura"
+    ],
     "conditions": "usado quando opção OPT1 selecionada / iterar por linhas onde agente = filtro",
-    "send_mode": "display (rascunho) by default (VBA uses objMail.display).",
+    "send_mode": "send",
     "source": "VBA-GFN"
   },
-
   "SUM001": {
     "subject_template": "SUM001 - Sumário da Liquidação Financeira - {empresa} - {mes}/{ano}.",
     "attachments": [
       "https://.../{ano}/{ano}{mes}/Sum%C3%A1rio/SUM001/{arquivo}.pdf"
     ],
     "body_html": "<p>Prezado(a),</p><p>Segue anexo o relatório SUM001, referente à liquidação financeira de <strong>{mesext}/{ano}</strong>. No dia <strong>{dataaporte}</strong> há uma previsão de <strong>{texto1}</strong> na sua conta no DAC de <strong>R$ {valor}</strong>.</p><p>{texto2}</p><p>Atenciosamente,<br>{assinatura}</p>",
-    "placeholders": ["empresa","mes","ano","mesext","dataaporte","valor","arquivo","texto1","texto2","assinatura"],
+    "placeholders": [
+      "empresa",
+      "mes",
+      "ano",
+      "mesext",
+      "dataaporte",
+      "valor",
+      "arquivo",
+      "texto1",
+      "texto2",
+      "assinatura"
+    ],
     "logic": [
       {
         "if": "valor > 0",
-        "set": {"texto1":"crédito","dataaporte":"dataaporte + 1","texto2":"crédito sujeito ao rateio de inadimplência (texto padrão ANEEL 552/2002)."}
+        "set": {
+          "texto1": "crédito",
+          "dataaporte": "dataaporte + 1",
+          "texto2": "crédito sujeito ao rateio de inadimplência (texto padrão ANEEL 552/2002)."
+        }
       },
       {
         "else": "valor < 0",
-        "set": {"texto1":"débito","texto2":"orientar verificação do saldo e aporte com 1 dia útil de antecedência."}
+        "set": {
+          "texto1": "débito",
+          "texto2": "orientar verificação do saldo e aporte com 1 dia útil de antecedência."
+        }
       }
     ],
     "send_mode": "display (rascunho).",
     "source": "VBA-SUM"
   },
-
   "LFN001": {
     "subject_template": "LFN001 - Resultado da Liquidação Financeira - {empresa} - {mes}/{ano}.",
     "attachments": [
@@ -40,12 +66,21 @@
     ],
     "body_html_credit": "<p>Prezado(a),</p><p>Segue anexo o relatório LFN001, referente ao resultado da liquidação financeira de <strong>{mesext}/{ano}</strong>. Este relatório demonstra a redução ocorrida no crédito decorrente do rateio das inadimplências.</p><p>Valor a Liquidar do Agente: <strong>R$ {Vliquidar}</strong>.<br>Valor Liquidado do Agente: <strong>R$ {Vliquidado}</strong>.<br>Participação no rateio de inadimplências: <strong>R$ {VPagente}</strong>.</p><p>Atenciosamente,<br>{assinatura}</p>",
     "body_html_debit": "<p>Prezado(a),</p><p>Segue anexo o relatório LFN001, referente ao resultado da liquidação financeira de <strong>{mesext}/{ano}</strong>. Este relatório demonstra o valor debitado na liquidação financeira.</p><p>Valor a Liquidar do Agente: <strong>R$ {Vliquidar}</strong>.<br>Valor Liquidado do Agente: <strong>R$ {Vliquidado}</strong>.<br>Inadimplência: <strong>R$ {VPagente}</strong>.</p><p>Atenciosamente,<br>{assinatura}</p>",
-    "placeholders": ["empresa","mes","ano","mesext","Vliquidar","Vliquidado","VPagente","arquivo","assinatura"],
+    "placeholders": [
+      "empresa",
+      "mes",
+      "ano",
+      "mesext",
+      "Vliquidar",
+      "Vliquidado",
+      "VPagente",
+      "arquivo",
+      "assinatura"
+    ],
     "conditions": "usar body_html_credit se Cells(i,9) = 'Crédito', body_html_debit se 'Débito'.",
     "send_mode": "display (rascunho) by default",
     "source": "VBA-LFN"
   },
-
   "LFRES": {
     "variants": {
       "LFRES001": {
@@ -66,23 +101,35 @@
     "selection_rules": "Se Cells(i,15) = 'Gerador-EER' ➜ usar LFRES0{mes} variante; se valor <> 0 e não Gerador-EER ➜ usar LFRES001.",
     "source": "VBA-LFRES"
   },
-
   "RCAP002": {
     "subject_template": "RCAP002 - Reserva de Capacidade - {empresa} - {mes}/{ano}.",
     "attachments": [
       "https://.../{ano}/{ano}{mes}/Reserva de Capacidade/RCAP002/{arquivo}.pdf"
     ],
     "body_html": "<p>Prezado(a),</p><p>Segue anexo o relatório RCAP002, referente ao resultado da Reserva de Capacidade de <strong>{mesext}/{ano}</strong>.</p><p>Valor do ERCAP a ser debitado: <strong>R$ {Vaporte}</strong>. Data do débito: <strong>{dataaporte}</strong>.</p><p>Atenciosamente,<br>{assinatura}</p>",
-    "placeholders": ["empresa","mes","ano","mesext","Vaporte","dataaporte","arquivo","assinatura"],
+    "placeholders": [
+      "empresa",
+      "mes",
+      "ano",
+      "mesext",
+      "Vaporte",
+      "dataaporte",
+      "arquivo",
+      "assinatura"
+    ],
     "send_mode": "display (rascunho)",
     "source": "VBA-RCAP"
-  }
-  ,
+  },
   "GFN - LEMBRETE": {
     "subject_template": "Atenção hoje é o dia do Aporte de Garantia Financeira à CCEE - {empresa}",
     "attachments": [],
     "body_html": "<p>Prezado(a),</p><p>Conforme informado anteriormente, hoje <strong>{dataaporte}</strong> é a data para o Aporte de Garantia Financeira à CCEE.</p><p>O saldo necessário em sua conta deverá ser maior ou igual a <strong>R$ {valor}</strong>.</p><p>A CCEE verificará o saldo na conta no DAC/Bradesco e agentes que não realizarem o aporte podem sofrer ajustes/cortes de contratos e demais penalidades.</p><p>Atenciosamente,<br>{assinatura}</p>",
-    "placeholders": ["empresa","dataaporte","valor","assinatura"],
+    "placeholders": [
+      "empresa",
+      "dataaporte",
+      "valor",
+      "assinatura"
+    ],
     "send_mode": "display",
     "source": "VBA-LEMBRETE"
   },
@@ -92,7 +139,16 @@
       "https://.../{ano}/{ano}{mes}/Liquidação%20de%20Reserva%20de%20Capacidade/LFRCAP001/{arquivo}.pdf"
     ],
     "body_html": "<p>Prezado(a),</p><p>Segue anexo o relatório LFRCAP001, referente ao resultado da Liquidação Financeira de Reserva de Capacidade de <strong>{mesext}/{ano}</strong>.</p><p>O valor do Encargo de Reserva de Capacidade - ERCAP a ser debitado é de <strong>R$ {valor}</strong> e deverá estar disponível independentemente do valor do Aporte de Garantia Financeira.</p><p>A data do débito será no dia <strong>{dataaporte}</strong>. Recomendamos disponibilizar o valor com 1 (um) dia útil de antecedência.</p><p>Atenciosamente,<br>{assinatura}</p>",
-    "placeholders": ["empresa","mes","ano","mesext","valor","dataaporte","arquivo","assinatura"],
+    "placeholders": [
+      "empresa",
+      "mes",
+      "ano",
+      "mesext",
+      "valor",
+      "dataaporte",
+      "arquivo",
+      "assinatura"
+    ],
     "send_mode": "display",
     "source": "VBA-LFRCAP"
   }

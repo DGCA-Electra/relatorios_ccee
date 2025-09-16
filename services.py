@@ -21,6 +21,7 @@ except ImportError:
     WIN32_AVAILABLE = False
 
 from config import load_configs, MESES, build_report_paths, get_user_paths
+from utils.security_utils import sanitize_html, sanitize_subject, is_safe_path, within_size_limit
 
 class ReportProcessingError(Exception):
     """Exceção customizada para erros de processamento."""
@@ -344,29 +345,26 @@ def handle_gfn001(row: pd.Series, cfg: Dict[str, Any], common: Dict[str, Any], a
     if not row.get('Valor', 0) > 0:
         warnings.append("O valor do aporte é zero ou negativo. Verifique a planilha de dados.")
     
+
     filename_gfn = _build_filename(row['Empresa'], 'GFN001', common['month'], common['year'])
     filename_sum = _build_filename(row['Empresa'], 'SUM001', common['month'], common['year'])
-    
+
     # Buscar anexo GFN001
     gfn_path, gfn_warnings = _find_attachment(cfg['pdfs_dir'], filename_gfn)
     warnings.extend(gfn_warnings)
-    
-    # Buscar anexo SUM001 (memória de cálculo)
-    sum001_cfg = all_configs.get('SUM001')
-    sum_path = None
-    sum_warnings = []
-    
-    if sum001_cfg and 'pdfs_dir' in sum001_cfg:
-        sum_path, sum_warnings = _find_attachment(
-            sum001_cfg['pdfs_dir'], 
-            filename_sum,
-            # Caminho alternativo para memória de cálculo
-            [f"{cfg['pdfs_dir'].replace('SUM001', 'SUM001 - Memória_de_Cálculo')}"]
-        )
-        warnings.extend(sum_warnings)
-    else:
-        warnings.append("Configuração do SUM001 não encontrada para anexar PDF da memória de cálculo")
-    
+
+
+    # Buscar anexo SUM001 - Memória_de_Cálculo removendo 'Garantia Financeira' do caminho
+    base_dir = Path(cfg['pdfs_dir'])
+    parts = list(base_dir.parts)
+    if 'Garantia Financeira' in parts:
+        parts.remove('Garantia Financeira')
+    memoria_calc_dir = Path(*parts).parent / 'Sumário' / 'SUM001 - Memória_de_Cálculo'
+    sum_path, sum_warnings = _find_attachment(str(memoria_calc_dir), filename_sum)
+    if not sum_path:
+        warnings.append(f"PDF da memória de cálculo não encontrado em: {memoria_calc_dir}")
+    warnings.extend(sum_warnings)
+
     # Montar lista de anexos
     attachments = []
     if gfn_path:
@@ -899,12 +897,26 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
         context[n] = ''
 
     subject, body = render_template_strings(subject_tpl, body_tpl, context)
+    subject = sanitize_subject(subject)
+    body = sanitize_html(body)
     attachments, attach_warnings = build_attachments(attachments_tpls, context)
+    # validações de anexos: path traversal e tamanho
+    safe_bases = [str(Path.cwd())]
+    final_attachments = []
+    for p in attachments:
+        if p and p.exists():
+            if not is_safe_path(safe_bases, p):
+                attach_warnings.append(f"Path inseguro (fora da base permitida): {p}")
+                continue
+            if not within_size_limit(p, max_mb=25):
+                attach_warnings.append(f"Arquivo muito grande (>25MB): {p.name}")
+                continue
+            final_attachments.append(p)
 
     result = {
         'subject': subject,
         'body': body,
-        'attachments': attachments,
+        'attachments': final_attachments,
         'missing_placeholders': missing,
         'attachment_warnings': attach_warnings,
         'variant': variant_name,
@@ -963,6 +975,6 @@ def preview_dados(report_type: str, analyst: str, month: str, year: str) -> Tupl
             axis=1
         )
     
-    preview_df = df_filtered.head(20)  # Mostra as 20 primeiras linhas para preview
+    preview_df = df_filtered.head(20)
     
     return df_filtered, preview_df

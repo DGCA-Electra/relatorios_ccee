@@ -1,0 +1,25 @@
+repos:
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+        stages: [commit]
+
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.6.3
+    hooks:
+      - id: ruff
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: '1.7.9'
+    hooks:
+      - id: bandit
+        args: ["-q", "-r", "."]
+
+

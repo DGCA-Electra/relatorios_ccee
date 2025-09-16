@@ -47,12 +47,45 @@ def safe_join_emails(email_field):
     return "; ".join([e.strip() for e in str(email_field).split(';') if e.strip()])
 
 def show_main_page() -> None:
+    # Definir all_configs e report_types no topo para garantir escopo global na função
+    all_configs = config.load_configs()
+    report_types = list(all_configs.keys())
+
+    # Processar envio de e-mails (deve ser feito após definição e validação de tipo, analista_final, mes, ano)
+    if (
+        'analyst' in st.session_state and
+        'report_type' in st.session_state and
+        'month' in st.session_state and
+        'year' in st.session_state
+    ):
+        analista_final = st.session_state.analyst
+        tipo = st.session_state.report_type
+        mes = st.session_state.month
+        ano = st.session_state.year
+
+        # Verificar se o analista é válido
+        if analista_final and analista_final in config.ANALISTAS and tipo and tipo in report_types and mes and mes in config.MESES and ano and ano in config.ANOS:
+            if st.session_state.get("send_trigger"):
+                with st.spinner("Enviando e-mails... Aguarde. Janelas do Outlook podem abrir para revisão."):
+                    try:
+                        results = services.process_reports(
+                            report_type=tipo,
+                            analyst=analista_final,
+                            month=mes,
+                            year=ano
+                        )
+                        st.session_state.results = results
+                        st.success(f"✅ E-mails processados e rascunhos criados no Outlook para {len(results)} empresas.")
+                    except services.ReportProcessingError as e:
+                        st.error(f"❌ Erro no envio: {e}")
+                st.session_state.send_trigger = False
     # OBS: template HTML fixo removido; usamos templates JSON dinâmicos
     """Renderiza a página principal de envio de relatórios."""
     st.title("📊 Envio de Relatórios CCEE - DGCA")
     
     st.info("💡 **Dica:** Você pode enviar relatórios para qualquer analista. Isso é útil durante férias ou ausências, quando um analista precisa enviar relatórios para outro.")
     
+    # Carregar configurações e tipos de relatório no início para garantir escopo
     all_configs = config.load_configs()
     report_types = list(all_configs.keys())
         
@@ -163,7 +196,7 @@ def show_main_page() -> None:
                 }
                 try:
                     rendered = services.render_email_from_template(tipo, dados_empresa, common, auto_send=False)
-                    with st.expander(f"Prévia #{idx+1} - {dados_empresa.get('Empresa','')}"):
+                    with st.expander(f"Prévia #{idx+1} - {dados_empresa.get('Empresa','')}", expanded=False):
                         render_email_preview(rendered['subject'], rendered['body'])
                 except Exception as e:
                     st.warning(f"Falha ao renderizar template para {dados_empresa.get('Empresa','')}: {e}")
@@ -404,12 +437,13 @@ def show_config_page() -> None:
                     selected_variant = st.selectbox(target_label, variant_keys, key=f"var_{key}")
                     edit_block = cfg['variants'][selected_variant]
                 else:
+                    selected_variant = "default"
                     edit_block = cfg
 
                 st.caption("Modo simples (HTML como no Outlook). Use Modo avançado para editar o JSON cru.")
                 with st.expander("Modo avançado (JSON)"):
-                    editable = st.text_area("JSON do Template", value=json_dumps_pretty(cfg), height=200, key=f"tpl_json_{key}")
-                    if st.button("Salvar JSON", key=f"save_json_{key}"):
+                    editable = st.text_area("JSON do Template", value=json_dumps_pretty(cfg), height=200, key=f"tpl_json_{key}_{selected_variant}")
+                    if st.button("Salvar JSON", key=f"save_json_{key}_{selected_variant}"):
                         try:
                             parsed = json.loads(editable)
                             templates_json[key] = parsed
