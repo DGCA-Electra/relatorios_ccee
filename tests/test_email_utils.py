@@ -1,5 +1,12 @@
 import pytest
-from mail.email_utils import montar_corpo_email
+from services import render_email_from_template
+
+def test_render_placeholders_sum001():
+    common = {'month_long': 'Janeiro', 'month_num': '01', 'year': '2025'}
+    row = {'Empresa': 'ACME', 'Valor': 123.45, 'Email': 'a@b.com', 'Situacao': 'Débito', 'dataaporte': '2025-01-12'}
+    res = render_email_from_template('SUM001', row, common, auto_send=False)
+    assert 'SUM001' in res['subject']
+    assert res['missing_placeholders'] == []
 
 # Template Jinja2 simplificado para teste
 TEST_TEMPLATE = """

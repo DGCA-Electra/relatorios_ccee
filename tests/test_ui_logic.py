@@ -36,3 +36,11 @@ def test_render_email_template(tmp_path):
     template = env.get_template("email_template.html")
     html = template.render(nome="Teste")
     assert "Olá Teste" in html
+
+def test_display_mode_default(monkeypatch):
+    # Não envia de fato; apenas verifica que função existe e não quebra
+    from services import render_email_from_template
+    common = {'month_long': 'Janeiro', 'month_num': '01', 'year': '2025'}
+    row = {'Empresa': 'ACME', 'Valor': 10, 'Email': 'a@b.com', 'Situacao': 'Débito', 'dataaporte': '2025-01-12'}
+    res = render_email_from_template('GFN001', row, common, auto_send=False)
+    assert 'GFN001' in res['subject']

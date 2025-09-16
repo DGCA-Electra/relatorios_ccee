@@ -9,6 +9,10 @@ import re
 import streamlit as st
 import os
 from typing import Dict, List, Any, Optional, Tuple
+import json
+from jinja2 import Environment, BaseLoader, StrictUndefined, meta
+from jinja2.sandbox import SandboxedEnvironment
+import logging
 
 try:
     import win32com.client as win32
@@ -128,6 +132,14 @@ def _format_date(date_value: Any) -> str:
     except (ValueError, TypeError):
         return "Data Inválida"
 
+def add_business_days(date_value: Any, days: int) -> str:
+    try:
+        base = pd.to_datetime(date_value)
+        delta = timedelta(days=days)
+        return (base + delta).strftime('%d/%m/%Y')
+    except Exception:
+        return _format_date(date_value)
+
 def _create_warning_html(warnings: List[str]) -> str:
     """
     Cria um bloco de alerta HTML a partir de uma lista de avisos.
@@ -230,7 +242,89 @@ def _find_attachment(pdf_dir: str, filename: str, alternative_paths: Optional[Li
     return None, warnings
 
 # ==============================================================================
-# HANDLERS DE E-MAIL (LÓGICA E TEMPLATES COMPLETOS)
+# ENGINE DE TEMPLATES (carregamento/salvamento/renderização)
+# ==============================================================================
+
+TEMPLATES_JSON_PATH = "email_templates.json"
+
+def load_email_templates() -> Dict[str, Any]:
+    try:
+        with open(TEMPLATES_JSON_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise ReportProcessingError(f"Arquivo de templates não encontrado: {TEMPLATES_JSON_PATH}")
+    except json.JSONDecodeError as e:
+        raise ReportProcessingError(f"JSON de templates inválido: {e}")
+
+def save_email_templates(data: Dict[str, Any]) -> None:
+    try:
+        with open(TEMPLATES_JSON_PATH, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        raise ReportProcessingError(f"Falha ao salvar templates: {e}")
+
+def _build_jinja_env() -> Environment:
+    env: Environment = SandboxedEnvironment(undefined=StrictUndefined, autoescape=True)
+    return env
+
+def validate_placeholders(template_str: str, available_fields: List[str]) -> Tuple[bool, List[str]]:
+    env = _build_jinja_env()
+    ast = env.parse(template_str)
+    names = sorted(meta.find_undeclared_variables(ast))
+    missing = [n for n in names if n not in available_fields]
+    return len(missing) == 0, missing
+
+def render_template_strings(subject_template: str, body_html: str, context: Dict[str, Any]) -> Tuple[str, str]:
+    env = _build_jinja_env()
+    subject = env.from_string(subject_template).render(**context)
+    body = env.from_string(body_html).render(**context)
+    return subject, body
+
+def resolve_variant(report_config: Dict[str, Any], context: Dict[str, Any]) -> Tuple[Dict[str, Any], str]:
+    """Seleciona a variante correta baseada em regras simples do JSON.
+    Retorna o bloco de template selecionado e o nome da variante.
+    """
+    # Caso simples: template direto no nível do report
+    if 'variants' not in report_config:
+        return report_config, 'default'
+
+    # Regras específicas para LFRES como no VBA: se TipoAgente == 'Gerador-EER' usa LFRES0{mes} quando valor == 0
+    if 'LFRES' in report_config.get('id', '') or True:
+        tipo_agente = str(context.get('TipoAgente') or context.get('tipo_agente') or '').strip()
+        valor = float(context.get('Valor') or context.get('valor') or 0)
+        mes_num = str(context.get('month_num') or context.get('mes') or '').zfill(2)
+        if tipo_agente == 'Gerador-EER':
+            key = f"LFRES0{mes_num}"
+            if key in report_config['variants']:
+                return report_config['variants'][key], key
+        # Caso geral: valor != 0 -> LFRES001, senão LFRES0{mes}
+        if valor != 0 and 'LFRES001' in report_config['variants']:
+            return report_config['variants']['LFRES001'], 'LFRES001'
+        key = f"LFRES0{mes_num}"
+        if key in report_config['variants']:
+            return report_config['variants'][key], key
+    # fallback primeira variante
+    first_key = next(iter(report_config['variants']))
+    return report_config['variants'][first_key], first_key
+
+def build_attachments(attachment_templates: List[str], context: Dict[str, Any]) -> Tuple[List[Path], List[str]]:
+    env = _build_jinja_env()
+    warnings: List[str] = []
+    paths: List[Path] = []
+    for tpl in attachment_templates or []:
+        try:
+            rendered = env.from_string(tpl).render(**context)
+            p = Path(rendered)
+            if p.exists():
+                paths.append(p)
+            else:
+                warnings.append(f"Anexo não encontrado: {rendered}")
+        except Exception as e:
+            warnings.append(f"Erro ao renderizar caminho de anexo: {e}")
+    return paths, warnings
+
+# ============================================================================== 
+# HANDLERS DE E-MAIL (LEGADO) — manter por compatibilidade até migração total
 # ==============================================================================
 
 def handle_gfn001(row: pd.Series, cfg: Dict[str, Any], common: Dict[str, Any], all_configs: Dict[str, Any]) -> Dict[str, Any]:
@@ -739,6 +833,88 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> Li
         })
     
     return results
+
+# ==============================================================================
+# Nova API baseada em templates JSON
+# ==============================================================================
+
+def render_email_from_template(report_type: str, row: Dict[str, Any], common: Dict[str, Any], auto_send: bool = False) -> Dict[str, Any]:
+    templates = load_email_templates()
+    if report_type not in templates:
+        raise ReportProcessingError(f"Template não encontrado para {report_type}")
+    report_cfg = templates[report_type]
+    # contexto base: row + common com alias mais usados
+    context: Dict[str, Any] = {**row, **common}
+    # Normalizações usuais
+    context.setdefault('empresa', row.get('Empresa'))
+    context.setdefault('mes', common.get('month_num'))
+    context.setdefault('mesext', common.get('month_long'))
+    context.setdefault('ano', common.get('year'))
+    context.setdefault('valor', row.get('Valor'))
+    context.setdefault('situacao', row.get('Situacao'))
+    context.setdefault('TipoAgente', row.get('TipoAgente'))
+    # Fallbacks para campos comuns de data
+    if 'dataaporte' not in context or not context.get('dataaporte'):
+        # usa data do common (report_date) ou a coluna 'Data' da linha
+        context['dataaporte'] = common.get('report_date') or row.get('Data') or ''
+
+    # Regras VBA específicas conhecidas
+    if report_type == 'SUM001' and str(row.get('Situacao')).strip() == 'Crédito':
+        # incrementar dataaporte em +1 dia útil (simplificado: +1 dia)
+        if 'dataaporte' in context:
+            context['dataaporte'] = add_business_days(context['dataaporte'], 1)
+
+    # Seleção de variante
+    selected, variant_name = resolve_variant({**report_cfg, 'id': report_type}, context)
+    subject_tpl = selected.get('subject_template') or report_cfg.get('subject_template', '')
+    body_tpl = selected.get('body_html') or selected.get('body_html_credit') or selected.get('body_html_debit') or report_cfg.get('body_html', '')
+    attachments_tpls = selected.get('attachments') or report_cfg.get('attachments', [])
+
+    # Conversão amigável: aceitar {campo} e também {{ campo }}
+    def normalize_placeholders(s: str) -> str:
+        if not isinstance(s, str):
+            return s
+        # converte {campo} em {{ campo }} quando não for já Jinja2
+        return re.sub(r"\{(\w+)\}", r"{{ \1 }}", s)
+
+    subject_tpl = normalize_placeholders(subject_tpl)
+    body_tpl = normalize_placeholders(body_tpl)
+    attachments_tpls = [normalize_placeholders(a) for a in attachments_tpls]
+
+    # Validação e preenchimento automático de placeholders ausentes
+    available_fields = list(context.keys())
+    env_tmp = _build_jinja_env()
+    ast_subj = env_tmp.parse(subject_tpl)
+    ast_body = env_tmp.parse(body_tpl)
+    names = set(meta.find_undeclared_variables(ast_subj)) | set(meta.find_undeclared_variables(ast_body))
+    for att in attachments_tpls:
+        try:
+            ast_att = env_tmp.parse(att)
+            names |= set(meta.find_undeclared_variables(ast_att))
+        except Exception:
+            pass
+    missing = sorted([n for n in names if n not in context])
+    # Preenche automaticamente não encontrados com string vazia para evitar erros de prévia
+    for n in missing:
+        context[n] = ''
+
+    subject, body = render_template_strings(subject_tpl, body_tpl, context)
+    attachments, attach_warnings = build_attachments(attachments_tpls, context)
+
+    result = {
+        'subject': subject,
+        'body': body,
+        'attachments': attachments,
+        'missing_placeholders': missing,
+        'attachment_warnings': attach_warnings,
+        'variant': variant_name,
+        'send_mode': selected.get('send_mode') or report_cfg.get('send_mode') or 'display'
+    }
+
+    # Envio
+    if auto_send:
+        _create_outlook_draft(row.get('Email', ''), result['subject'], result['body'], result['attachments'])
+    return result
 
 @st.cache_data(show_spinner=True)
 def preview_dados(report_type: str, analyst: str, month: str, year: str) -> Tuple[pd.DataFrame, pd.DataFrame]:

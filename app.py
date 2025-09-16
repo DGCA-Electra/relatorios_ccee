@@ -11,6 +11,7 @@ from utils.dataframe_utils import tratar_valores_df
 from config import REPORT_DISPLAY_COLUMNS
 import streamlit.components.v1 as components
 from jinja2 import Environment, FileSystemLoader
+import json
 
 # Configuração básica de logging
 logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
@@ -27,10 +28,26 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+def init_state():
+    defaults = {
+        "report_type": "GFN001",
+        "analyst": "Artur Bello Rodrigues",
+        "month": "JANEIRO",
+        "year": 2025
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+
+def safe_join_emails(email_field):
+    if not email_field:
+        return ""
+    if isinstance(email_field, list):
+        return "; ".join(e.strip() for e in email_field if e)
+    return "; ".join([e.strip() for e in str(email_field).split(';') if e.strip()])
+
 def show_main_page() -> None:
-    # Carregar template HTML para e-mail
-    with open('templates/email_template.html', 'r', encoding='utf-8') as f:
-        email_template = f.read()
+    # OBS: template HTML fixo removido; usamos templates JSON dinâmicos
     """Renderiza a página principal de envio de relatórios."""
     st.title("📊 Envio de Relatórios CCEE - DGCA")
     
@@ -41,16 +58,6 @@ def show_main_page() -> None:
         
 
     # Inicializa st.session_state com valores padrão
-    def init_state():
-        defaults = {
-            "report_type": "GFN001",
-            "analyst": "Artur Bello Rodrigues",
-            "month": "JANEIRO",
-            "year": 2025
-        }
-        for k, v in defaults.items():
-            if k not in st.session_state:
-                st.session_state[k] = v
     init_state()
 
     # Renderização dos parâmetros principais
@@ -103,18 +110,17 @@ def show_main_page() -> None:
         return
 
     # Função para sanitizar e-mails
-    def safe_join_emails(email_field):
-        if not email_field:
-            return ""
-        if isinstance(email_field, list):
-            return "; ".join(e.strip() for e in email_field if e)
-        return "; ".join([e.strip() for e in str(email_field).split(';') if e.strip()])
+    
 
     # Função para renderizar pré-visualização do e-mail
-    def render_email_preview(context):
-        env = Environment(loader=FileSystemLoader("templates"))
-        template = env.get_template("email_template.html")
-        html = template.render(**context)
+    def render_email_preview(subject: str, body_html: str):
+        html = f"""
+        <div style='font-family: Inter, Arial, sans-serif'>
+            <h4>{subject}</h4>
+            <hr/>
+            {body_html}
+        </div>
+        """
         components.html(html, height=400, scrolling=True)
 
     # Processar visualização de dados
@@ -142,16 +148,25 @@ def show_main_page() -> None:
             title = f"Dados para {tipo} - {mes}/{ano} - {analista_final}"
             st.subheader(title)
             st.dataframe(df_preview.reset_index(drop=True), use_container_width=True)
-            # Pré-visualização do e-mail
+            # Pré-visualização do e-mail via engine de templates (em tela, sem Outlook)
             st.subheader("Pré-visualização do E-mail")
-            dados_empresa = df_preview.iloc[0].to_dict()
-            # Sanitizar campos
-            for k in dados_empresa:
-                if dados_empresa[k] is None:
-                    dados_empresa[k] = "N/A"
-            if 'Email' in dados_empresa:
-                dados_empresa['Email'] = safe_join_emails(dados_empresa['Email'])
-            render_email_preview(dados_empresa)
+            preview_limit = min(5, len(df_preview))
+            for idx in range(preview_limit):
+                dados_empresa = df_preview.iloc[idx].to_dict()
+                if 'Email' in dados_empresa:
+                    dados_empresa['Email'] = safe_join_emails(dados_empresa['Email'])
+                meses_map = {m.upper(): f"{i+1:02d}" for i, m in enumerate(config.MESES)}
+                common = {
+                    'month_long': mes.title(),
+                    'month_num': meses_map.get(mes.upper(), '00'),
+                    'year': ano,
+                }
+                try:
+                    rendered = services.render_email_from_template(tipo, dados_empresa, common, auto_send=False)
+                    with st.expander(f"Prévia #{idx+1} - {dados_empresa.get('Empresa','')}"):
+                        render_email_preview(rendered['subject'], rendered['body'])
+                except Exception as e:
+                    st.warning(f"Falha ao renderizar template para {dados_empresa.get('Empresa','')}: {e}")
     # Remover duplicação: não usar variáveis analista, tipo, mes, ano fora do session_state
 
 
@@ -162,9 +177,8 @@ def show_main_page() -> None:
         if not form:
             st.error("❌ Dados do formulário não encontrados.")
             return
-        st.header(f"📈 Dados para {form.get('tipo', 'N/A')} - {form.get('mes', 'N/A')}/{form.get('ano', 'N/A')} - {form.get('analista', 'N/A')}")
-        col1, col2 = st.columns(2)
-        col2.metric("Analista", form.get('analista', 'N/A'))
+        # st.header(f"📈 Dados para {form.get('tipo', 'N/A')} - {form.get('mes', 'N/A')}/{form.get('ano', 'N/A')} - {form.get('analista', 'N/A')}")
+        # Removido bloco de métricas abaixo da pré-visualização para simplificar a tela
 
         # DRY: lógica consolidada para LFRES001/LFRES002
         if form.get('tipo') in ['LFRES001', 'LFRES002']:
@@ -359,6 +373,124 @@ def show_config_page() -> None:
             except Exception as e:
                 st.error(f"❌ Erro ao salvar configurações: {e}")
                 registrar_log(f"Erro ao salvar configurações: {e}")
+
+    st.divider()
+    st.subheader("🧩 Templates de E-mail")
+    st.caption("Edite os templates usados para assunto, corpo e anexos. As alterações são salvas em email_templates.json.")
+    try:
+        templates_json = services.load_email_templates()
+    except Exception as e:
+        st.error(f"Erro ao carregar templates: {e}")
+        templates_json = {}
+
+    def json_dumps_pretty(obj: Any) -> str:
+        try:
+            return json.dumps(obj, ensure_ascii=False, indent=2)
+        except Exception:
+            return "{}"
+
+    tab_names = list(templates_json.keys()) if templates_json else []
+    if tab_names:
+        tabs = st.tabs(tab_names)
+        for i, key in enumerate(tab_names):
+            with tabs[i]:
+                st.markdown(f"**Report:** `{key}`")
+                cfg = templates_json.get(key, {})
+                has_variants = isinstance(cfg.get('variants'), dict)
+                variant_keys = list(cfg.get('variants', {}).keys()) if has_variants else []
+                target_label = 'Variante' if has_variants else 'Template'
+                selected_variant = None
+                if has_variants:
+                    selected_variant = st.selectbox(target_label, variant_keys, key=f"var_{key}")
+                    edit_block = cfg['variants'][selected_variant]
+                else:
+                    edit_block = cfg
+
+                st.caption("Modo simples (HTML como no Outlook). Use Modo avançado para editar o JSON cru.")
+                with st.expander("Modo avançado (JSON)"):
+                    editable = st.text_area("JSON do Template", value=json_dumps_pretty(cfg), height=200, key=f"tpl_json_{key}")
+                    if st.button("Salvar JSON", key=f"save_json_{key}"):
+                        try:
+                            parsed = json.loads(editable)
+                            templates_json[key] = parsed
+                            services.save_email_templates(templates_json)
+                            st.success("JSON salvo.")
+                        except Exception as e:
+                            st.error(f"JSON inválido: {e}")
+
+                col1, col2 = st.columns([2,1])
+                with col1:
+                    subj = st.text_input("Assunto (subject_template)", value=edit_block.get('subject_template', ''), key=f"subj_{key}_{selected_variant}")
+                with col2:
+                    send_mode = st.selectbox("Modo de envio", options=["display","send"], index=0 if (edit_block.get('send_mode','display').startswith('display')) else 1, key=f"send_{key}_{selected_variant}")
+
+                body = st.text_area("Corpo do e-mail (HTML)", value=edit_block.get('body_html') or edit_block.get('body_html_credit') or edit_block.get('body_html_debit') or '', height=200, key=f"body_{key}_{selected_variant}")
+                attachments_str = "\n".join(edit_block.get('attachments', []))
+                attachments_edit = st.text_area("Anexos (um por linha)", value=attachments_str, height=100, key=f"att_{key}_{selected_variant}")
+
+                # Inserção rápida de placeholders
+                # Placeholders: removidos da UI para simplificar
+
+                if st.button("Salvar Template", key=f"save_simple_{key}_{selected_variant}"):
+                    # aplicar mudanças no bloco selecionado
+                    new_block = dict(edit_block)
+                    new_block['subject_template'] = subj
+                    if 'body_html_credit' in new_block or 'body_html_debit' in new_block:
+                        # se for LFN001 com variantes de crédito/débito, grava em body_html por simplicidade
+                        new_block['body_html'] = body
+                    else:
+                        new_block['body_html'] = body
+                    new_block['attachments'] = [ln.strip() for ln in attachments_edit.splitlines() if ln.strip()]
+                    new_block['send_mode'] = send_mode
+                    if has_variants:
+                        cfg['variants'][selected_variant] = new_block
+                        templates_json[key] = cfg
+                    else:
+                        templates_json[key] = new_block
+                    try:
+                        services.save_email_templates(templates_json)
+                        st.success("Template salvo.")
+                    except Exception as e:
+                        st.error(f"Falha ao salvar: {e}")
+
+                live_preview = st.checkbox("Prévia instantânea", value=False, key=f"liveprev_{key}_{selected_variant}")
+                if live_preview:
+                    # renderiza continuamente com base nos dados atuais
+                    sample = st.session_state.get('preview_data')
+                    if sample is not None and not sample.empty:
+                        row = sample.iloc[0].to_dict()
+                        meses_map = {m.upper(): f"{i+1:02d}" for i, m in enumerate(config.MESES)}
+                        common = {
+                            'month_long': st.session_state.month.title() if 'month' in st.session_state else '',
+                            'month_num': meses_map.get(st.session_state.month.upper(), '00') if 'month' in st.session_state else '',
+                            'year': st.session_state.year if 'year' in st.session_state else '',
+                        }
+                        try:
+                            rendered = services.render_email_from_template(key, row, common, auto_send=False)
+                            components.html(f"<h4>{rendered['subject']}</h4>" + rendered['body'], height=350, scrolling=True)
+                        except Exception as e:
+                            st.error(f"Falha na renderização: {e}")
+                if st.button("Pré-visualizar", key=f"prev_simple_{key}_{selected_variant}"):
+                    sample = st.session_state.get('preview_data')
+                    if sample is not None and not sample.empty:
+                        row = sample.iloc[0].to_dict()
+                        meses_map = {m.upper(): f"{i+1:02d}" for i, m in enumerate(config.MESES)}
+                        common = {
+                            'month_long': st.session_state.month.title() if 'month' in st.session_state else '',
+                            'month_num': meses_map.get(st.session_state.month.upper(), '00') if 'month' in st.session_state else '',
+                            'year': st.session_state.year if 'year' in st.session_state else '',
+                        }
+                        try:
+                            rendered = services.render_email_from_template(key, row, common, auto_send=False)
+                            components.html(f"<h4>{rendered['subject']}</h4>" + rendered['body'], height=350, scrolling=True)
+                            if rendered['missing_placeholders']:
+                                st.warning("Placeholders ausentes: " + ", ".join(rendered['missing_placeholders']))
+                            if rendered['attachment_warnings']:
+                                st.warning("\n".join(rendered['attachment_warnings']))
+                        except Exception as e:
+                            st.error(f"Falha na renderização: {e}")
+                    else:
+                        st.warning("Carregue dados na página 'Envio de Relatórios' para usar a prévia.")
 
 def main() -> None:
     """Função principal da aplicação."""
