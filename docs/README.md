@@ -1,115 +1,91 @@
-# RPA-Envio-Emails-STREAMLIT
+# 🤖 RPA-Envio-Emails-STREAMLIT
 
-Sistema de automação para envio de relatórios CCEE via e-mail desenvolvido em Streamlit.
+## Automação Inteligente para Envio de Relatórios CCEE via E-mail com Streamlit
 
-## 📋 Descrição
+Este projeto inovador oferece uma solução de **Automação de Processos Robóticos (RPA)** para otimizar o envio de relatórios da Câmara de Comercialização de Energia Elétrica (CCEE) a clientes. Desenvolvido com **Streamlit**, ele proporciona uma interface web intuitiva para a geração e envio automatizado de e-mails personalizados, acompanhados de anexos em PDF, com base em dados extraídos de planilhas Excel.
 
-Este projeto automatiza o processo de envio de relatórios da Câmara de Comercialização de Energia Elétrica (CCEE) para clientes, gerando e-mails personalizados com anexos PDF baseados em dados de planilhas Excel.
+--- 
 
-## 🚀 Funcionalidades
+## ✨ Funcionalidades Principais
 
-- **Automação de E-mails**: Geração automática de e-mails com Outlook
-- **Múltiplos Tipos de Relatório**: Suporte a GFN001, SUM001, LFN001, LFRES, LEMBRETE, LFRCAP, RCAP
-- **Interface Web**: Interface amigável desenvolvida em Streamlit
-- **Configuração Flexível**: Sistema de configuração via JSON
-- **Envio Multi-Analista**: Possibilidade de enviar relatórios para qualquer analista
-- **Tratamento de Erros**: Sistema robusto de tratamento de erros
+O sistema foi projetado para oferecer uma experiência robusta e flexível, destacando-se por:
+
+-   **Automação de E-mails**: Geração e envio automático de e-mails através da integração com o Microsoft Outlook, permitindo a criação de rascunhos para revisão ou envio direto.
+-   **Suporte a Múltiplos Relatórios CCEE**: Compatibilidade com diversos tipos de relatórios, incluindo GFN001, SUM001, LFN001, LFRES, LEMBRETE, LFRCAP e RCAP, garantindo cobertura abrangente das necessidades da CCEE.
+-   **Interface Web Intuitiva (Streamlit)**: Uma aplicação web amigável que simplifica a interação do usuário, tornando o processo de envio de relatórios acessível mesmo para usuários não técnicos.
+-   **Configuração Dinâmica**: Permite a configuração flexível de parâmetros via interface web ou arquivos JSON, adaptando-se facilmente a novas necessidades ou mudanças nos formatos de relatório.
+-   **Envio Multi-Analista**: Capacidade de qualquer usuário enviar relatórios em nome de qualquer analista, crucial para cenários de férias, ausências ou delegação de tarefas.
+-   **Tratamento de Erros Robusto**: Mecanismos avançados de tratamento de erros para garantir a resiliência do sistema, com logs detalhados para diagnóstico e monitoramento.
+-   **Engine de Templates Jinja2**: Utilização de templates Jinja2 para a criação dinâmica de assuntos e corpos de e-mail, permitindo alta personalização e flexibilidade na comunicação.
+-   **Validação de Anexos**: Verificação automática da existência e do tamanho dos arquivos anexados, prevenindo erros de envio e garantindo a conformidade.
+
+--- 
 
 ## 🛠️ Tecnologias Utilizadas
 
-- **Streamlit**: Interface web
-- **Pandas**: Manipulação de dados
-- **OpenPyXL**: Leitura de arquivos Excel
-- **PyWin32**: Integração com Microsoft Outlook
-- **Pathlib**: Manipulação de caminhos de arquivo
+Este projeto foi construído com uma pilha de tecnologias modernas e eficientes:
 
-## 📦 Instalação
+| Categoria         | Tecnologia         | Descrição                                                              |
+| :---------------- | :----------------- | :--------------------------------------------------------------------- |
+| **Framework Web** | Streamlit          | Para a construção da interface de usuário interativa e responsiva.     |
+| **Dados**         | Pandas             | Essencial para manipulação e análise de dados de planilhas Excel.      |
+| **Excel**         | OpenPyXL           | Biblioteca para leitura e escrita de arquivos `.xlsx`.                 |
+| **Automação**     | PyWin32            | Integração com o Microsoft Outlook para automação de e-mails (apenas Windows). |
+| **Caminhos**      | Pathlib            | Manipulação de caminhos de arquivo de forma orientada a objetos.       |
+| **Templates**     | Jinja2             | Motor de templates para renderização dinâmica de e-mails.              |
+| **Logging**       | `logging` (Python) | Para registro de eventos e depuração do sistema.                       |
+
+--- 
+
+## 📦 Instalação e Configuração
+
+Para colocar o projeto em funcionamento, siga os passos abaixo:
 
 ### Pré-requisitos
 
-- Python 3.8 ou superior
-- Windows (para integração com Outlook)
-- Microsoft Outlook instalado
+-   **Python**: Versão 3.8 ou superior.
+-   **Sistema Operacional**: Windows (obrigatório para a integração com o Microsoft Outlook via `PyWin32`).
+-   **Microsoft Outlook**: Instalado e configurado no ambiente local.
 
 ### Passos de Instalação
 
-1. **Clone o repositório**:
-   ```bash
-   git clone <url-do-repositorio>
-   cd RPA-Envio-Emails-STREAMLIT
-   ```
+1.  **Clone o repositório**: Abra seu terminal ou prompt de comando e execute:
 
-2. **Crie um ambiente virtual**:
-   ```bash
-   python -m venv venv
-   ```
+    ```bash
+    git clone https://github.com/malikribeiro/RPA-Envio-Emails-STREAMLIT.git
+    cd RPA-Envio-Emails-STREAMLIT
+    ```
 
-3. **Ative o ambiente virtual**:
-   ```bash
-   # Windows (PowerShell)
-   .\venv\Scripts\Activate.ps1
-   
-   # Windows (Command Prompt)
-   .\venv\Scripts\activate.bat
-   
-   # Linux/macOS
-   source venv/bin/activate
-   ```
+2.  **Crie um ambiente virtual**: É altamente recomendável usar um ambiente virtual para gerenciar as dependências do projeto.
 
-4. **Instale as dependências**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+    ```bash
+    python -m venv venv
+    ```
 
-## 🚀 Execução
+3.  **Ative o ambiente virtual**:
 
-1. **Ative o ambiente virtual** (se não estiver ativo):
-   ```bash
-   .\venv\Scripts\Activate.ps1
-   ```
+    -   **Windows (PowerShell)**:
+        ```bash
+        .\venv\Scripts\Activate.ps1
+        ```
+    -   **Windows (Command Prompt)**:
+        ```bash
+        .\venv\Scripts\activate.bat
+        ```
+    -   **Linux/macOS** (apenas para desenvolvimento, Outlook não será funcional):
+        ```bash
+        source venv/bin/activate
+        ```
 
-2. **Execute a aplicação**:
-   ```bash
-   streamlit run app.py
-   ```
+4.  **Instale as dependências**: Com o ambiente virtual ativado, instale todas as bibliotecas necessárias:
 
-> **Nota de UI:** Os parâmetros de envio agora aparecem apenas no painel principal. A barra lateral (sidebar) contém apenas navegação e links rápidos.
-
-## 🖥️ Navegação e Layout
-
-- A navegação principal está na barra lateral (sidebar), com opções de "Envio de Relatórios" e "Configurações".
-- Todos os parâmetros de envio (tipo de relatório, analista, mês, ano) estão centralizados no painel principal.
-- Pré-visualização do e-mail é exibida como HTML renderizado.
-- Visualização de dados e KPIs organizados em colunas, com layout limpo e responsivo.
-
-> **Nota de UI:** Os parâmetros de envio agora aparecem apenas no painel principal. A barra lateral (sidebar) contém apenas navegação e links rápidos.
-
-3. **Acesse no navegador**:
-   - A aplicação estará disponível em `http://localhost:8501`
-
-## 📁 Estrutura do Projeto
-
-```
-RPA-Envio-Emails-STREAMLIT/
-├── app.py                 # Aplicação principal Streamlit
-├── services.py            # Lógica de negócio e handlers de e-mail
-├── config.py              # Configurações e utilitários
-├── config_relatorios.json # Configurações dos relatórios
-├── requirements.txt       # Dependências do projeto
-├── README.md             # Este arquivo
-├── static/               # Arquivos estáticos (logo, ícones)
-├── templates/            # Templates HTML (se aplicável)
-└── venv/                # Ambiente virtual (não versionado)
-```
-
-## 🔧 Configuração
-
-### Login do Usuário
-
-- O sistema utiliza o login de rede do usuário para configurar automaticamente os caminhos dos arquivos
-- Formato esperado: `nome.sobrenome`
+    ```bash
+    pip install -r requirements.txt
+    ```
 
 ### Estrutura de Arquivos Esperada
+
+O sistema espera uma estrutura de diretórios específica para localizar os arquivos de relatório e contatos. Esta estrutura é baseada no login de rede do usuário e pode ser personalizada em `config.py`.
 
 ```
 C:/Users/{login_usuario}/
@@ -121,18 +97,53 @@ C:/Users/{login_usuario}/
         │   │       └── Relatórios CCEE/
         │   │           └── {ano}/
         │   │               └── {ano_mes}/
-        │   │                   ├── Garantia Financeira/
-        │   │                   ├── Liquidação Financeira/
-        │   │                   ├── Sumário/
+        │   │                   ├── Garantia Financeira/  # PDFs GFN001
+        │   │                   ├── Liquidação Financeira/ # PDFs LFN001
+        │   │                   ├── Sumário/             # PDFs SUM001
         │   │                   └── ...
         │   └── DGC/
         │       └── Macro/
-        │           └── Contatos de E-mail para Macros.xlsx
+        │           └── Contatos de E-mail para Macros.xlsx # Planilha de contatos
 ```
+
+--- 
+
+## 🚀 Execução da Aplicação
+
+Após a instalação, siga estes passos para executar o RPA:
+
+1.  **Ative o ambiente virtual** (se ainda não estiver ativo).
+
+2.  **Execute a aplicação Streamlit**:
+
+    ```bash
+    streamlit run app.py
+    ```
+
+3.  **Acesse no navegador**: A aplicação estará disponível em `http://localhost:8501`.
+
+--- 
+
+## 🖥️ Visão Geral da Interface e Navegação
+
+A interface do usuário foi cuidadosamente projetada para ser clara e eficiente:
+
+-   **Navegação Principal**: Localizada na barra lateral (sidebar), com opções como "Envio de Relatórios" e "Configurações".
+-   **Parâmetros de Envio**: Todos os parâmetros essenciais (tipo de relatório, analista, mês, ano) estão centralizados no painel principal para facilitar o acesso.
+-   **Pré-visualização de E-mail**: Uma funcionalidade de pré-visualização exibe o e-mail renderizado em HTML antes do envio, permitindo verificações.
+-   **Visualização de Dados**: Dados e KPIs são apresentados em um layout limpo e responsivo, otimizado para a visualização.
+
+--- 
+
+## ⚙️ Configurações Avançadas
+
+O projeto oferece opções de configuração para maior flexibilidade:
 
 ### Configuração de Relatórios
 
-Cada tipo de relatório pode ser configurado através da interface web ou diretamente no arquivo `config_relatorios.json`:
+Cada tipo de relatório pode ser ajustado via interface web na seção "Configurações" ou diretamente no arquivo `config_relatorios.json`. As configurações incluem o nome da aba dos dados (`sheet_dados`), a aba de contatos (`sheet_contatos`), a linha do cabeçalho (`header_row`) e o mapeamento de colunas (`data_columns`).
+
+Exemplo de `config_relatorios.json`:
 
 ```json
 {
@@ -145,119 +156,67 @@ Cada tipo de relatório pode ser configurado através da interface web ou direta
 }
 ```
 
-## 📊 Tipos de Relatório Suportados
+### Templates de E-mail
 
-| Tipo | Descrição | Arquivo de Dados |
-|------|-----------|------------------|
-| GFN001 | Garantia Financeira | GFN003 |
-| SUM001 | Sumário da Liquidação Financeira | LFN004 |
-| LFN001 | Liquidação Financeira | LFN004 |
-| LFRES | Liquidação da Energia de Reserva | LFRES002 |
-| LEMBRETE | Lembrete de Aporte | GFN003 |
-| LFRCAP | Liquidação de Reserva de Capacidade | LFRCAP002 |
-| RCAP | Reserva de Capacidade | RCAP002 |
-
-## 🔍 Uso
-
-### 1. Login
-- Acesse a aplicação e faça login com seu usuário de rede
-- O sistema configurará automaticamente os caminhos dos arquivos
-
-### 2. Seleção de Parâmetros
-- Escolha o tipo de relatório
-- Selecione o mês e ano
-- Clique em "Pré-visualizar Dados"
-
-### 3. Processamento
-- O sistema carregará os dados das planilhas
-- Filtrará por analista responsável
-- Gerará e-mails no Outlook para revisão
-
-### 4. Envio Multi-Analista
-- Qualquer usuário pode enviar relatórios para qualquer analista
-- Útil durante férias ou ausências, quando um analista precisa enviar relatórios para outro
-
-## ⚙️ Configurações Avançadas
-
-### Personalização de Caminhos
-
-Os caminhos são configurados automaticamente, mas podem ser personalizados editando `config.py`:
-
-```python
-PATH_CONFIGS = {
-    "sharepoint_root": "ELECTRA COMERCIALIZADORA DE ENERGIA S.A/GE - ECE/DGCA/DGA/CCEE/Relatórios CCEE",
-    "contatos_email": "ELECTRA COMERCIALIZADORA DE ENERGIA S.A/GE - ECE/DGCA/DGC/Macro/Contatos de E-mail para Macros.xlsx",
-    "user_base": "C:/Users"
-}
-```
+Os templates de e-mail (assunto, corpo e anexos) são gerenciados via `config/email_templates.json` e podem ser editados através da interface de configurações. O sistema suporta variantes de templates para diferentes cenários, como no caso do relatório LFRES.
 
 ### Adicionando Novos Tipos de Relatório
 
-1. Adicione a configuração em `config.py`:
-```python
-DEFAULT_CONFIGS["NOVO_TIPO"] = {
-    "sheet_dados": "Nome da Aba",
-    "sheet_contatos": "Planilha1",
-    "header_row": 0,
-    "data_columns": "Coluna1:Map1,Coluna2:Map2"
-}
-```
+Para estender o sistema com novos tipos de relatório:
 
-2. Crie o handler em `services.py`:
-```python
-def handle_novo_tipo(row: pd.Series, cfg: Dict[str, Any], common: Dict[str, Any]) -> Dict[str, Any]:
-    # Lógica do handler
-    pass
+1.  **Adicione a configuração** em `config.py` e `config_relatorios.json`.
+2.  **Crie um handler** correspondente em `services.py` para definir a lógica de processamento e montagem do e-mail para o novo tipo.
+3.  **Atualize `REPORT_HANDLERS`** em `services.py` para incluir o novo handler.
 
-REPORT_HANDLERS['NOVO_TIPO'] = handle_novo_tipo
-```
+--- 
 
-## 🐛 Tratamento de Erros
+## 🐛 Tratamento de Erros e Logs
 
-O sistema inclui tratamento robusto de erros:
+O sistema incorpora um tratamento de erros abrangente para garantir a estabilidade e a confiabilidade:
 
-- **Arquivos não encontrados**: Verificação de existência de arquivos
-- **Configurações inválidas**: Validação de configurações
-- **Dados ausentes**: Tratamento de dados faltantes
-- **Erros de Outlook**: Tratamento de falhas na integração
+-   **Verificação de Arquivos**: Validação da existência de arquivos e permissões de acesso.
+-   **Validação de Configurações**: Checagem de configurações inválidas ou incompletas.
+-   **Tratamento de Dados**: Gerenciamento de dados ausentes ou inconsistentes.
+-   **Integração Outlook**: Tratamento de falhas na comunicação com o Microsoft Outlook.
 
-## 📝 Logs
+Todos os eventos e erros são registrados em `logs/app.log`, facilitando a depuração e o monitoramento do sistema.
 
-- Os logs são salvos em `app.log`
-- Incluem informações de erro e processamento
-- Útil para debugging e monitoramento
+--- 
 
 ## 🔒 Segurança
 
-- Login baseado em usuário de rede
-- Validação de formatos de entrada
-- Tratamento seguro de caminhos de arquivo
-- Logs para auditoria
+Aspectos de segurança foram considerados no desenvolvimento:
+
+-   **Login de Rede**: Autenticação baseada no usuário de rede para acesso seguro.
+-   **Validação de Entrada**: Sanitização e validação de formatos de entrada para prevenir vulnerabilidades.
+-   **Caminhos Seguros**: Tratamento seguro de caminhos de arquivo para evitar acessos não autorizados.
+-   **Auditoria**: Logs detalhados para fins de auditoria e rastreabilidade.
+
+--- 
 
 ## 🤝 Contribuição
 
-Para contribuir com o projeto:
+Contribuições são bem-vindas! Para contribuir com o projeto:
 
-1. Faça um fork do repositório
-2. Crie uma branch para sua feature
-3. Implemente as mudanças
-4. Teste adequadamente
-5. Submeta um pull request
+1.  Faça um fork do repositório.
+2.  Crie uma nova branch para sua feature (`git checkout -b feature/minha-nova-feature`).
+3.  Implemente suas mudanças e certifique-se de que os testes passem.
+4.  Submeta um Pull Request detalhado.
+
+--- 
 
 ## 📄 Licença
 
 Este projeto é de uso interno da ELECTRA COMERCIALIZADORA DE ENERGIA S.A.
 
+--- 
+
 ## 👥 Autores
 
-- Desenvolvido para DGCA
-- Mantido pela equipe de desenvolvimento
+-   **Desenvolvido para**: DGCA
+-   **Mantido por**: Malik Ribeiro Mourad
 
-## 📞 Suporte
-
-Para suporte técnico ou dúvidas, entre em contato com a equipe de desenvolvimento.
-
----
+--- 
 
 **Versão**: 1.0.0  
-**Última atualização**: Julho 2025
+**Última atualização**: Outubro 2025
