@@ -60,9 +60,7 @@
   },
   "LFN001": {
     "subject_template": "LFN001 - Resultado da Liquidação Financeira - {empresa} - {mes}/{ano}",
-    "attachments": [
-      "{pdfs_dir}/{arquivo}"
-    ],
+    "attachments": [],
     "body_html_credit": "<p>Prezado (a),</p><p>Segue anexo o relatório LFN001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao resultado da liquidação financeira de <strong>{mesext}/{ano}</strong>. Este relatório demonstra a redução ocorrida no crédito da liquidação financeira decorrente do rateio das inadimplências dos agentes devedores da Câmara.</p><p>Ressaltamos que no próximo ciclo de contabilização e liquidação financeira serão incluídos no resultado do agente todo e qualquer crédito não recebido, estando o agente sujeito a um novo rateio de inadimplência, conforme Resolução ANEEL nº 552, de 14/10/2002.</p><p>Valor a Liquidar do Agente: <strong>{ValorLiquidacao}</strong>.<br>Valor Liquidado do Agente: <strong>{ValorLiquidado}</strong>.<br>Participação do agente no rateio de inadimplências: <strong>{ValorInadimplencia}</strong>.</p><p>Estamos à disposição para mais informações.</p><p>Atenciosamente,</p>",
     "body_html_debit": "<p>Prezado (a),</p><p>Segue anexo o relatório LFN001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao resultado da liquidação financeira de <strong>{mesext}/{ano}</strong>. Este relatório demonstra o valor debitado na liquidação financeira da CCEE.</p><p>Valor a Liquidar do Agente: <strong>{ValorLiquidacao}</strong>.<br>Valor Liquidado do Agente: <strong>{ValorLiquidado}</strong>.<br>Inadimplência: <strong>{ValorInadimplencia}</strong>.</p><p>Estamos à disposição para mais informações.</p><p>Atenciosamente,</p>",
     "placeholders": [
