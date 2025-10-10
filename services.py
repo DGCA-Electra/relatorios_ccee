@@ -384,8 +384,6 @@ def handle_gfn001(row: pd.Series, cfg: Dict[str, Any], common: Dict[str, Any], a
     <p>Estamos à disposição para mais informações.</p>
     """
     return {'subject': subject, 'body': body, 'attachments': attachments}
-
-def handle_sum001(row: pd.Series, cfg: Dict[str, Any], common: Dict[str, Any]) -> Dict[str, Any]:
     """
     Handler para relatórios SUM001.
     
@@ -653,7 +651,6 @@ def handle_rcap(row: pd.Series, cfg: Dict[str, Any], common: Dict[str, Any]) -> 
 # Mapeamento de handlers
 REPORT_HANDLERS = {
     'GFN001': handle_gfn001, 
-    'SUM001': handle_sum001, 
     'LFN001': handle_lfn001,
     'LFRES001': handle_lfres, 
     'GFN - LEMBRETE': handle_lembrete, 
@@ -731,50 +728,31 @@ def _load_and_process_data(cfg: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.DataFr
 
     return df_dados, df_contatos
 
+# Em services.py, substitua a função process_reports
 def process_reports(report_type: str, analyst: str, month: str, year: str) -> List[Dict[str, Any]]:
-    """
-    Processa relatórios e gera e-mails.
-    
-    Args:
-        report_type: Tipo do relatório
-        analyst: Analista responsável
-        month: Mês do relatório
-        year: Ano do relatório
-        
-    Returns:
-        Lista com resultados do processamento
-        
-    Raises:
-        ReportProcessingError: Se houver erro no processamento
-    """
     all_configs = load_configs()
     cfg = all_configs.get(report_type)
     if not cfg: 
         raise ReportProcessingError(f"'{report_type}' não encontrado nas configurações.")
 
-    # Construir caminhos dinamicamente
     try:
         report_paths = build_report_paths(report_type, year, month)
         cfg.update(report_paths)
     except ValueError as e:
         raise ReportProcessingError(f"Erro ao construir caminhos: {e}")
 
-    # Carregar e processar dados
     df_dados, df_contatos = _load_and_process_data(cfg)
-    
-    # Filtrar dados por analista
+
     df_merged = pd.merge(df_dados, df_contatos, on='Empresa', how='left')
     df_filtered = df_merged[df_merged['Analista'] == analyst].copy()
     if df_filtered.empty: 
         raise ReportProcessingError(f"Nenhum registro encontrado para o analista '{analyst}'.")
-    
+
     df_filtered['Email'] = df_filtered['Email'].fillna('EMAIL_NAO_ENCONTRADO')
 
-    # Preparar dados comuns
     meses_map = {m.upper(): f"{i+1:02d}" for i, m in enumerate(MESES)}
     report_date = ""
-    
-    if report_type in ['GFN001', 'LEMBRETE']:
+    if report_type in ['GFN001', 'GFN - LEMBRETE']:
         try:
             df_data_raw = pd.read_excel(Path(cfg['excel_dados']), sheet_name=cfg['sheet_dados'], header=None, usecols=[0])
             report_date = _format_date(str(df_data_raw.iloc[23, 0]).replace("Data do Aporte de Garantias:", "").strip())
@@ -791,43 +769,27 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> Li
         'report_date': report_date
     }
 
-    # Processar cada linha e gerar e-mails
     results, created_count = [], 0
-    handler = REPORT_HANDLERS.get(report_type)
-    
-    if not handler:
-        raise ReportProcessingError(f"Handler não encontrado para o tipo de relatório '{report_type}'")
-    
     for _, row in df_filtered.iterrows():
-        email_data = None
-        anexos = 0
-        
         try:
-            if report_type == 'GFN001':
-                email_data = handler(row, cfg, common_data, all_configs)
-            else:
-                email_data = handler(row, cfg, common_data)
+            row_dict = row.to_dict()
+            # Chamada unificada para o motor de templates
+            email_data = render_email_from_template(report_type, row_dict, common_data, cfg, auto_send=True)
+
+            if email_data:
+                created_count += 1
+                results.append({
+                    'empresa': row['Empresa'],
+                    'data': report_date or _format_date(row.get('Data')),
+                    'valor': _format_currency(row.get('Valor')),
+                    'email': row['Email'], 
+                    'anexos_count': len(email_data.get('attachments', [])), 
+                    'created_count': created_count,
+                })
         except Exception as e:
             print(f"Erro ao processar linha para {row.get('Empresa', 'Empresa desconhecida')}: {e}")
             continue
-        
-        # Adicionar resultado mesmo se email_data for None (como no caso do lembrete)
-        if email_data:
-            created_count += 1
-            assinatura = f"<br><br><p>Atenciosamente,</p><p><strong>{analyst}</strong></p>"
-            email_data['body'] += assinatura
-            _create_outlook_draft(row['Email'], **email_data)
-            anexos = sum(1 for p in email_data.get('attachments', []) if p and p.exists())
-        
-        results.append({
-            'empresa': row['Empresa'],
-            'data': report_date or _format_date(row.get('Data')),
-            'valor': _format_currency(row.get('Valor')),
-            'email': row['Email'], 
-            'anexos_count': anexos, 
-            'created_count': created_count,
-        })
-    
+
     return results
 
 # ==============================================================================
@@ -841,6 +803,36 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
     report_cfg = templates[report_type]
     # contexto base: row + common com alias mais usados
     context: Dict[str, Any] = {**row, **common}
+    if report_type == 'SUM001':
+        try:
+            # Lê o arquivo Excel para buscar as datas de débito/crédito
+            df_raw = pd.read_excel(Path(cfg['excel_dados']), sheet_name=cfg['sheet_dados'], header=None)
+            data_debito_quadro1 = df_raw.iloc[23, 0]  # Linha 24, Coluna A
+            data_credito_quadro1 = df_raw.iloc[23, 1] # Linha 24, Coluna B
+        except Exception:
+            data_debito_quadro1 = None
+            data_credito_quadro1 = None
+
+        situacao = str(row.get('Situacao', '')).strip()
+        data_liquidacao = datetime.now().strftime('%d/%m/%Y') # Define um valor padrão
+
+        if situacao == 'Crédito':
+            context['texto1'] = "crédito"
+            if data_credito_quadro1 and not pd.isna(data_credito_quadro1):
+                data_liquidacao = _format_date(data_credito_quadro1)
+            context['texto2'] = "ressaltamos que esse crédito está sujeito ao rateio da eventual inadimplência observada no processo de liquidação financeira da Câmara. Dessa forma, caso o valor não seja creditado na íntegra, o mesmo será incluído no próximo ciclo de contabilização e liquidação financeira, estando o agente sujeito a um novo rateio de inadimplência, conforme Resolução ANEEL nº 552, de 14/10/2002."
+        elif situacao == 'Débito':
+            context['texto1'] = "débito"
+            if data_debito_quadro1 and not pd.isna(data_debito_quadro1):
+                data_liquidacao = _format_date(data_debito_quadro1)
+            context['texto2'] = "teoricamente a conta possui o saldo necessário, visto que o aporte financeiro foi solicitado anteriormente. No entanto, a fim de evitar qualquer penalidade junto à CCEE, orientamos a verificação do saldo e também que o aporte de qualquer diferença seja efetuado com 1 (um) dia útil de antecedência da data da liquidação financeira."
+        else:
+            context['texto1'] = "transação"
+            context['texto2'] = "verifique os dados na planilha."
+
+        context['data_liquidacao'] = data_liquidacao
+        # Garante que o valor no template seja sempre positivo, como na lógica original
+        context['valor'] = _format_currency(abs(row.get('Valor', 0)))
     # Normalizações usuais
     context.setdefault('empresa', row.get('Empresa'))
     context.setdefault('mes', common.get('month_num'))
@@ -926,53 +918,35 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
         _create_outlook_draft(row.get('Email', ''), result['subject'], result['body'], result['attachments'])
     return result
 
+# Em services.py, na função preview_dados
 @st.cache_data(show_spinner=True)
-def preview_dados(report_type: str, analyst: str, month: str, year: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Pré-visualiza dados de um relatório.
-    
-    Args:
-        report_type: Tipo do relatório
-        analyst: Analista responsável
-        month: Mês do relatório
-        year: Ano do relatório
-        
-    Returns:
-        Tupla com (DataFrame completo, DataFrame de preview)
-        
-    Raises:
-        ReportProcessingError: Se houver erro no processamento
-    """
+def preview_dados(report_type: str, analyst: str, month: str, year: str) -> Tuple[pd.DataFrame, pd.DataFrame, Dict[str, Any]]: # Adicione o tipo de retorno
     all_configs = load_configs()
     cfg = all_configs.get(report_type)
     if not cfg:
         raise ReportProcessingError(f"'{report_type}' não encontrado nas configurações.")
-    
-    # Construir caminhos dinamicamente
+
     try:
         report_paths = build_report_paths(report_type, year, month)
         cfg.update(report_paths)
     except ValueError as e:
         raise ReportProcessingError(f"Erro ao construir caminhos: {e}")
 
-    # Carregar e processar dados
     df_dados, df_contatos = _load_and_process_data(cfg)
-    
-    # Filtrar dados por analista
+
     df_merged = pd.merge(df_dados, df_contatos, on='Empresa', how='left')
     df_filtered = df_merged[df_merged['Analista'] == analyst].copy()
     if df_filtered.empty:
         raise ReportProcessingError(f"Nenhum registro encontrado para o analista '{analyst}'.")
-    
+
     df_filtered['Email'] = df_filtered['Email'].fillna('EMAIL_NAO_ENCONTRADO')
-    
-    # Para SUM001, calcular as datas de débito/crédito
+
     if report_type == 'SUM001':
         df_filtered['Data_Debito_Credito'] = df_filtered.apply(
             lambda row: _calculate_sum001_dates(cfg, row.get('Situacao', '')),
             axis=1
         )
-    
+
     preview_df = df_filtered.head(20)
-    
-    return df_filtered, preview_df
+
+    return df_filtered, preview_df, cfg # Modifique a linha de retorno

@@ -26,8 +26,7 @@
     "attachments": [
       "https://.../{ano}/{ano}{mes}/Sum%C3%A1rio/SUM001/{arquivo}.pdf"
     ],
-    "body_html": "<p>Prezado(a),</p><p>Segue anexo o relatório SUM001, referente à liquidação financeira de <strong>{mesext}/{ano}</strong>. No dia <strong>{dataaporte}</strong> há uma previsão de <strong>{texto1}</strong> na sua conta no DAC de <strong>R$ {valor}</strong>.</p><p>{texto2}</p><p>Atenciosamente,<br>{assinatura}</p>",
-    "placeholders": [
+    "body_html": "<p>Prezado(a),</p><p>Segue anexo o relatório SUM001, referente à liquidação financeira de <strong>{mesext}/{ano}</strong>. No dia <strong>{data_liquidacao}</strong> há uma previsão de <strong>{texto1}</strong> na sua conta no DAC de <strong>{valor}</strong>.</p><p>{texto2}</p><p>Atenciosamente,<br>{assinatura}</p>",    "placeholders": [
       "empresa",
       "mes",
       "ano",
@@ -106,7 +105,7 @@
     "attachments": [
       "https://.../{ano}/{ano}{mes}/Reserva de Capacidade/RCAP002/{arquivo}.pdf"
     ],
-    "body_html": "<p>Prezado(a),</p><p>Segue anexo o relatório RCAP002, referente ao resultado da Reserva de Capacidade de <strong>{mesext}/{ano}</strong>.</p><p>Valor do ERCAP a ser debitado: <strong>R$ {Vaporte}</strong>. Data do débito: <strong>{dataaporte}</strong>.</p><p>Atenciosamente,<br>{assinatura}</p>",
+    "body_html": "<p>Prezado(a),</p><p>Segue anexo o relatório RCAP002, referente ao resultado da Reserva de Capacidade de <strong>{mesext}/{ano}</strong>.</p><p>Valor do ERCAP a ser debitado: <strong>R$ {valor}</strong>. Data do débito: <strong>{dataaporte}</strong>.</p><p>Atenciosamente,<br>{assinatura}</p>",
     "placeholders": [
       "empresa",
       "mes",
