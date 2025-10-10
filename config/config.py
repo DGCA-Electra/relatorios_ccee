@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional
 CONFIG_FILE = Path('config_relatorios.json')
 ANALISTAS = [
     'Artur Bello Rodrigues', 'Camila Padovan Baptista', 'Cassiana Unruh',
-    'Isabela Loredo', 'Jorge Ferreira', 'Tiago Padilha Foletto'
+    'Isabela Loredo', 'Tiago Padilha Foletto'
 ]
 MESES = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
          'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO']
