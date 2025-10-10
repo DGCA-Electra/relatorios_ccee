@@ -26,8 +26,9 @@ class ReportProcessingError(Exception):
     pass
 
 # ==============================================================================
-# FUNÇÕES AUXILIARES (sem alterações)
+# FUNÇÕES AUXILIARES
 # ==============================================================================
+
 def _create_outlook_draft(recipient: str, subject: str, body: str, attachments: List[Path]) -> None:
     if not WIN32_AVAILABLE:
         print("--- MODO DE SIMULAÇÃO ---")
@@ -91,7 +92,7 @@ def _find_attachment(pdf_dir: str, filename: str) -> Tuple[Optional[Path], List[
     return None, warnings
 
 # ==============================================================================
-# ENGINE DE TEMPLATES (Versão Refatorada)
+# MOTOR DE TEMPLATES E LÓGICA DE E-MAIL
 # ==============================================================================
 TEMPLATES_JSON_PATH = "config/email_templates.json"
 
@@ -102,45 +103,41 @@ def load_email_templates() -> Dict[str, Any]:
     except Exception as e:
         raise ReportProcessingError(f"Falha ao carregar {TEMPLATES_JSON_PATH}: {e}")
 
-def render_email_from_template(report_type: str, row: Dict[str, Any], common: Dict[str, Any], cfg: Dict[str, Any], auto_send: bool = False) -> Optional[Dict[str, Any]]:
+def render_email_from_template(report_type: str, row: Dict[str, Any], common: Dict[str, Any], cfg: Dict[str, Any], auto_send: bool = False) -> Dict[str, Any]:
     templates = load_email_templates()
     if report_type not in templates:
-        return None # Retorna None se não houver template; a lógica de fallback será usada
+        raise ReportProcessingError(f"Template para '{report_type}' não encontrado em {TEMPLATES_JSON_PATH}")
 
     report_cfg = templates[report_type]
     context = {**row, **common, **cfg}
 
     # Normaliza variáveis para garantir compatibilidade com os templates
     context.setdefault('empresa', row.get('Empresa'))
-    context.setdefault('mes', common.get('month_num'))
     context.setdefault('mesext', common.get('month_long'))
+    context.setdefault('mes', common.get('month_num'))
     context.setdefault('ano', common.get('year'))
-    context.setdefault('valor', row.get('Valor'))
-    context.setdefault('situacao', row.get('Situacao'))
-    context.setdefault('TipoAgente', row.get('TipoAgente'))
-    
+
     # Lógica de negócio específica para relatórios
     if report_type == 'SUM001':
         try:
             df_raw = _load_excel_data(cfg['excel_dados'], cfg['sheet_dados'], -1)
-            data_debito = df_raw.iloc[23, 0]
-            data_credito = df_raw.iloc[23, 1]
+            data_debito, data_credito = df_raw.iloc[23, 0], df_raw.iloc[23, 1]
         except Exception:
             data_debito, data_credito = None, None
         
         situacao = str(row.get('Situacao', '')).strip()
-        
+        data_liquidacao = datetime.now().strftime('%d/%m/%Y')
+
         if situacao == 'Crédito':
-            context['texto1'] = "crédito"
-            context['data_liquidacao'] = _format_date(data_credito)
-            context['texto2'] = "ressaltamos que esse crédito está sujeito ao rateio da eventual inadimplência..."
+            context['texto1'], data_liquidacao = "crédito", _format_date(data_credito)
+            context['texto2'] = "ressaltamos que esse crédito está sujeito ao rateio..."
         elif situacao == 'Débito':
-            context['texto1'] = "débito"
-            context['data_liquidacao'] = _format_date(data_debito)
+            context['texto1'], data_liquidacao = "débito", _format_date(data_debito)
             context['texto2'] = "teoricamente a conta possui o saldo necessário..."
         else:
             context['texto1'], context['texto2'] = "transação", "verifique os dados na planilha."
         
+        context['data_liquidacao'] = data_liquidacao
         context['valor'] = abs(row.get('Valor', 0))
 
     # Formatação de valores ANTES de renderizar
@@ -148,88 +145,56 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
         if key in context and isinstance(context[key], (int, float)):
             context[key] = _format_currency(context[key])
 
-    # Lógica de anexo
+    # --- LÓGICA DE ANEXOS ---
     final_attachments, attach_warnings = [], []
-    filename = _build_filename(str(row.get('Empresa','')), report_type, str(common.get('month_long','')).upper(), str(common.get('year','')))
+    filename = _build_filename(str(row.get('Empresa','')), report_type, common['month_long'].upper(), str(common.get('year','')))
     if cfg.get('pdfs_dir'):
         path, warnings = _find_attachment(cfg['pdfs_dir'], filename)
         if path: final_attachments.append(path)
         attach_warnings.extend(warnings)
     
-    # Renderização
-    body_tpl = ''
-    if report_type == 'LFN001': # Lógica para escolher template de crédito/débito
-        body_tpl = report_cfg.get('body_html_credit') if str(row.get('Situacao','')).strip() == 'Crédito' else report_cfg.get('body_html_debit','')
-    else:
-        body_tpl = report_cfg.get('body_html', '')
+    # LÓGICA RESTAURADA: Anexo secundário para GFN001
+    if report_type == 'GFN001':
+        filename_sum = _build_filename(str(row.get('Empresa','')), 'SUM001', common['month_long'].upper(), str(common.get('year','')))
+        base_dir = Path(cfg.get('pdfs_dir', ''))
+        memoria_calc_dir = base_dir.parent.parent / 'Sumário' / 'SUM001 - Memória_de_Cálculo'
+        sum_path, sum_warnings = _find_attachment(str(memoria_calc_dir), filename_sum)
+        if sum_path: final_attachments.append(sum_path)
+        attach_warnings.extend(sum_warnings)
+    
+    # --- RENDERIZAÇÃO DO TEMPLATE ---
+    selected, variant_name = resolve_variant(report_type, report_cfg, context)
+    if variant_name == 'SKIP':
+        return None # Retorna None para pular a criação do e-mail
 
-    subject_tpl = report_cfg.get('subject_template', '')
+    subject_tpl = selected.get('subject_template', '')
+    body_tpl = selected.get('body_html', '')
 
-    def normalize_placeholders(s: str) -> str:
-        return re.sub(r"\{(\w+)\}", r"{{ \1 }}", s) if isinstance(s, str) else s
+    # Lógica para LFN001 continua necessária aqui
+    if report_type == 'LFN001' and str(row.get('Situacao','')).strip() == 'Crédito':
+        body_tpl = selected.get('body_html_credit', body_tpl)
+    elif report_type == 'LFN001':
+        body_tpl = selected.get('body_html_debit', body_tpl)
 
-    for key, val in context.items():
-        if isinstance(val, str):
-            context[key] = val.replace('{', '{{').replace('}', '}}')
+    def normalize(s: str): return re.sub(r"\{(\w+)\}", r"{{ \1 }}", s) if isinstance(s, str) else s
+    for k in meta.find_undeclared_variables(Environment().parse(normalize(body_tpl))): context.setdefault(k, f'[{k} N/D]')
 
     env = Environment(loader=BaseLoader())
-    subject = env.from_string(normalize_placeholders(subject_tpl)).render(context)
-    body = env.from_string(normalize_placeholders(body_tpl)).render(context)
+    subject = env.from_string(normalize(subject_tpl)).render(context)
+    body = env.from_string(normalize(body_tpl)).render(context)
     
-    result = {
-        'subject': sanitize_subject(subject),
-        'body': sanitize_html(body),
-        'attachments': final_attachments
-    }
+    result = {'subject': sanitize_subject(subject), 'body': sanitize_html(body), 'attachments': final_attachments}
 
     if auto_send:
-        # A assinatura é adicionada aqui para o envio final
-        assinatura = f"<br><br><p>Atenciosamente,</p><p><strong>{common['analyst']}</strong></p>"
-        result['body'] += assinatura
+        result['body'] += f"<br><br><p>Atenciosamente,</p><p><strong>{common['analyst']}</strong></p>"
         _create_outlook_draft(row.get('Email', ''), result['subject'], result['body'], result['attachments'])
     
     return result
-
-
-# ==============================================================================
-# HANDLERS DE E-MAIL (Legado - Mantidos para relatórios não migrados)
-# ==============================================================================
-
-def handle_gfn001(row: pd.Series, cfg: Dict[str, Any], common: Dict[str, Any]) -> Dict[str, Any]:
-    # (Esta função e as outras handle_... permanecem exatamente como estavam no seu código original)
-    warnings = []
-    # ... (código completo do seu handle_gfn001 original)
-    return {'subject': '...', 'body': '...', 'attachments': []}
-
-def handle_lfres(row: pd.Series, cfg: Dict[str, Any], common: Dict[str, Any]) -> Dict[str, Any]:
-    # (código completo do seu handle_lfres original)
-    return {'subject': '...', 'body': '...', 'attachments': []}
-
-def handle_lembrete(row: pd.Series, cfg: Dict[str, Any], common: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    # (código completo do seu handle_lembrete original)
-    return {'subject': '...', 'body': '...', 'attachments': []}
-
-def handle_lfrcap(row: pd.Series, cfg: Dict[str, Any], common: Dict[str, Any]) -> Dict[str, Any]:
-    # (código completo do seu handle_lfrcap original)
-    return {'subject': '...', 'body': '...', 'attachments': []}
-
-def handle_rcap(row: pd.Series, cfg: Dict[str, Any], common: Dict[str, Any]) -> Dict[str, Any]:
-    # (código completo do seu handle_rcap original)
-    return {'subject': '...', 'body': '...', 'attachments': []}
-
-REPORT_HANDLERS = {
-    'GFN001': handle_gfn001,
-    'LFRES001': handle_lfres,
-    'GFN - LEMBRETE': handle_lembrete,
-    'LFRCAP001': handle_lfrcap,
-    'RCAP002': handle_rcap,
-}
 
 # ==============================================================================
 # FUNÇÃO PRINCIPAL DE PROCESSAMENTO
 # ==============================================================================
 def _load_and_process_data(cfg: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    # (Esta função permanece como estava)
     header = int(cfg.get('header_row', 0))
     df_dados = _load_excel_data(cfg['excel_dados'], cfg['sheet_dados'], header)
     df_contatos = _load_excel_data(cfg['excel_contatos'], cfg['sheet_contatos'], 0)
@@ -237,22 +202,19 @@ def _load_and_process_data(cfg: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.DataFr
     column_mapping = dict(item.split(':') for item in cfg['data_columns'].split(','))
     df_dados.rename(columns=column_mapping, inplace=True)
     df_contatos.rename(columns={'AGENTE': 'Empresa', 'ANALISTA': 'Analista', 'E-MAILS RELATÓRIOS CCEE': 'Email'}, inplace=True)
-    
     return df_dados, df_contatos
 
 def process_reports(report_type: str, analyst: str, month: str, year: str) -> List[Dict[str, Any]]:
     all_configs = load_configs()
     cfg = all_configs.get(report_type)
-    report_paths = build_report_paths(report_type, year, month)
-    cfg.update(report_paths)
+    cfg.update(build_report_paths(report_type, year, month))
     
     df_dados, df_contatos = _load_and_process_data(cfg)
     
     df_merged = pd.merge(df_dados, df_contatos, on='Empresa', how='left')
     df_filtered = df_merged[df_merged['Analista'] == analyst].copy()
     
-    if df_filtered.empty:
-        return []
+    if df_filtered.empty: return []
 
     df_filtered['Email'] = df_filtered['Email'].fillna('EMAIL_NAO_ENCONTRADO')
 
@@ -260,26 +222,13 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> Li
         'analyst': analyst,
         'month_long': month.title(),
         'month_num': {m: f"{i+1:02d}" for i, m in enumerate(MESES)}.get(month.upper()),
-        'month': month,
-        'year': year
+        'month': month, 'year': year
     }
 
     results, created_count = [], 0
     for _, row in df_filtered.iterrows():
         try:
-            row_dict = row.to_dict()
-            # Tenta usar o novo sistema de templates primeiro
-            email_data = render_email_from_template(report_type, row_dict, common_data, cfg, auto_send=True)
-
-            # Se não houver template, usa o handler legado como fallback
-            if not email_data and report_type in REPORT_HANDLERS:
-                handler = REPORT_HANDLERS[report_type]
-                email_data = handler(row, cfg, common_data)
-                if email_data:
-                    assinatura = f"<br><br><p>Atenciosamente,</p><p><strong>{analyst}</strong></p>"
-                    email_data['body'] += assinatura
-                    _create_outlook_draft(row['Email'], **email_data)
-
+            email_data = render_email_from_template(report_type, row.to_dict(), common_data, cfg, auto_send=True)
             if email_data:
                 created_count += 1
                 results.append({
@@ -295,10 +244,52 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> Li
             
     return results
 
+def resolve_variant(report_type: str, report_config: Dict[str, Any], context: Dict[str, Any]) -> Tuple[Dict[str, Any], str]:
+    """Seleciona a variante correta baseada nas regras de negócio."""
+
+    if 'variants' not in report_config:
+        return report_config, 'default'
+
+    variants = report_config['variants']
+
+    # Lógica específica para LFRES
+    if report_type == 'LFRES':
+        # Converte 'valor' de string formatada para float para a lógica
+        try:
+            # Remove o R$, o ponto de milhar e troca a vírgula do decimal por ponto
+            valor_str = str(context.get('valor', '0')).replace('R$', '').replace('.', '').replace(',', '.').strip()
+            valor = float(valor_str)
+        except (ValueError, TypeError):
+            valor = 0.0
+
+        tipo_agente = str(context.get('TipoAgente', '')).strip()
+
+        # Cenário 3: Valor é zero
+        if valor == 0:
+            # Se for Gerador-EER com valor zero, não envia e-mail
+            if tipo_agente == 'Gerador-EER':
+                return {}, 'SKIP' # Retorna um sinal para pular o e-mail
+            return variants.get('ZERO_VALOR', {}), 'ZERO_VALOR'
+
+        # Cenário 1: Valor > 0 e é Gerador-EER
+        if tipo_agente == 'Gerador-EER':
+            return variants.get('COM_VALOR_GERADOR', {}), 'COM_VALOR_GERADOR'
+
+        # Cenário 2: Valor > 0 e não é Gerador-EER
+        else:
+            return variants.get('COM_VALOR_OUTROS', {}), 'COM_VALOR_OUTROS'
+
+    # Fallback para outros relatórios com variantes (se houver no futuro)
+    first_key = next(iter(variants))
+    return variants[first_key], first_key
+
 @st.cache_data(show_spinner=True)
-def preview_dados(report_type: str, analyst: str, month: str, year: str) -> Tuple[pd.DataFrame, pd.DataFrame, Dict[str, Any]]:
+def preview_dados(report_type: str, analyst: str, month: str, year: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     all_configs = load_configs()
     cfg = all_configs.get(report_type)
+    if not cfg:
+        raise ReportProcessingError(f"'{report_type}' não encontrado nas configurações.")
+
     report_paths = build_report_paths(report_type, year, month)
     cfg.update(report_paths)
     
@@ -311,4 +302,4 @@ def preview_dados(report_type: str, analyst: str, month: str, year: str) -> Tupl
 
     df_filtered['Email'] = df_filtered['Email'].fillna('EMAIL_NAO_ENCONTRADO')
     
-    return df_filtered, df_filtered.head(20), cfg
+    return df_filtered, cfg

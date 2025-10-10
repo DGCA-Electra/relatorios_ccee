@@ -107,7 +107,7 @@ def show_main_page() -> None:
     if st.session_state.get("preview_trigger"):
         with st.spinner("Carregando dados para visualização... Por favor, aguarde."):
             try:
-                df_filtered, df_preview, cfg = services.preview_dados(report_type=tipo, analyst=analista_final, month=mes, year=str(ano))
+                df_filtered, cfg = services.preview_dados(report_type=tipo, analyst=analista_final, month=mes, year=str(ano))
                 st.session_state.raw_preview_data = df_filtered
                 st.session_state.preview_cfg = cfg
                 st.session_state.form_data = {'tipo': tipo, 'analista': analista_final, 'mes': mes, 'ano': ano}

@@ -79,25 +79,21 @@
     "source": "VBA-LFN"
   },
   "LFRES": {
-    "variants": {
-      "LFRES001": {
-        "subject_template": "LFRES001 - Liquidação energia de reserva à CCEE - {empresa} - {mes}/{ano}.",
-        "attachments": [
-          "https://.../{ano}/{ano}{mes}/Liquida%C3%A7%C3%A3o%20da%20Energia%20de%20Reserva/LFRES001/{arquivo}.pdf"
-        ],
-        "body_html": "<p>Prezado(a),</p><p>Segue anexo o relatório LFRES001 - Liquidação de Energia de Reserva de <strong>{mesext}/{ano}</strong>, referente ao pagamento de ressarcimento pela energia contratada não entregue.</p><p>Valor do EER a ser debitado: <strong>R$ {valor}</strong>. Data do débito: <strong>{dataaporte}</strong> (recomendar 1 dia útil de antecedência).</p><p>Atenciosamente,<br>{assinatura}</p>"
-      },
-      "LFRES0X": {
-        "subject_template": "LFRES0{mes} - Liquidação energia de reserva à CCEE - {empresa} - {mes}/{ano}.",
-        "attachments": [
-          "https://.../{ano}/{ano}{mes}/Liquida%C3%A7%C3%A3o%20da%20Energia%20de%20Reserva/LFRES0{mes}/{arquivo}.pdf"
-        ],
-        "body_html": "<p>Prezado(a),</p><p>Segue anexo o relatório LFRES0{mes}, referente à Liquidação de Energia de Reserva de <strong>{mesext}/{ano}</strong>. Para esse mês, os recursos na CONER são suficientes; NÃO haverá cobrança do EER no dia <strong>{dataaporte}</strong>.</p><p>Atenciosamente,<br>{assinatura}</p>"
-      }
+  "variants": {
+    "COM_VALOR_GERADOR": {
+      "subject_template": "LFRES001 - Liquidação energia de reserva à CCEE - {empresa} - {mes}/{ano}",
+      "body_html": "<p>Prezado(a),</p><p>Segue anexo o relatório LFRES001 - Liquidação de Energia de Reserva de <strong>{mesext}/{ano}</strong>, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao pagamento de ressarcimento pela energia contratada não entregue.</p><p>O valor do Encargo de Energia de Reserva - EER a ser debitado da sua conta no Departamento de Ações e Custódia (DAC) do Banco Bradesco é de <strong>{valor}</strong> e deverá estar disponível independentemente do valor do Aporte de Garantia Financeira.</p><p>A data do débito será no dia <strong>{data}</strong>. Recomendamos que o valor seja disponibilizado com 1 (um) dia útil de antecedência.</p><p>Estamos à disposição para mais informações.</p>"
     },
-    "selection_rules": "Se Cells(i,15) = 'Gerador-EER' ➜ usar LFRES0{mes} variante; se valor <> 0 e não Gerador-EER ➜ usar LFRES001.",
-    "source": "VBA-LFRES"
-  },
+    "COM_VALOR_OUTROS": {
+      "subject_template": "LFRES001 - Liquidação energia de reserva à CCEE - {empresa} - {mes}/{ano}",
+      "body_html": "<p>Prezado(a),</p><p>Segue anexo o relatório LFRES001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente a Liquidação de Energia de Reserva de {mesext}/{ano}.</p><p>O valor do Encargo de Energia de Reserva - EER a ser debitado da sua conta no Departamento de Ações e Custódia (DAC) do Banco Bradesco é de <strong>{valor}</strong> e deverá estar disponível independentemente do valor do Aporte de Garantia Financeira.</p><p>A data do débito será no dia <strong>{data}</strong>. Recomendamos que o valor seja disponibilizado com 1 (um) dia útil de antecedência.</p><p>Estamos à disposição para mais informações.</p>"
+    },
+    "ZERO_VALOR": {
+      "subject_template": "LFRES0{mes} - Liquidação energia de reserva à CCEE - {empresa} - {mes}/{ano}",
+      "body_html": "<p>Prezado(a),</p><p>Segue anexo o relatório LFRES0{mes}, referente à Liquidação de Energia de Reserva de <strong>{mesext}/{ano}</strong>.</p><p>Para esse mês os recursos disponíveis na Conta de Energia de Reserva - CONER são suficientes para o pagamento de todas as obrigações vinculadas à energia de reserva, portanto, não será realizada a cobrança do Encargo de Energia de Reserva - EER no dia <strong>{data}</strong>.</p><p>Estamos à disposição para mais informações.</p>"
+    }
+  }
+},
   "RCAP002": {
     "subject_template": "RCAP002 - Reserva de Capacidade - {empresa} - {mes}/{ano}.",
     "attachments": [
