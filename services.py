@@ -117,6 +117,27 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
     context.setdefault('mes', common.get('month_num'))
     context.setdefault('ano', common.get('year'))
 
+    # Lógica específica para LFRES (extração de data do cabeçalho)
+    if report_type.startswith('LFRES'):
+        try:
+            # Lê a planilha sem cabeçalho para acessar posições fixas
+            df_raw_date = pd.read_excel(Path(cfg['excel_dados']), sheet_name=cfg['sheet_dados'], header=None)
+            # Pega a data de débito da célula A27 (linha 26 no excel, índice 25)
+            data_debito = df_raw_date.iloc[26, 0]
+            # Pega a data de crédito da célula B27 (linha 27 no excel, índice 26)
+            data_credito = df_raw_date.iloc[26, 1]
+            
+            # Escolhe a data correta com base na situação
+            situacao = str(row.get('Situacao', '')).strip()
+            if situacao == 'Crédito':
+                context['data'] = _format_date(data_credito)
+            else: # Débito ou outro
+                context['data'] = _format_date(data_debito)
+
+        except Exception as e:
+            print(f"AVISO: Não foi possível extrair a data do cabeçalho do LFRES. Erro: {e}")
+            context['data'] = "Data não encontrada"
+
     # Lógica de negócio específica para relatórios
     if report_type == 'SUM001':
         try:
@@ -144,6 +165,9 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
     for key in ['ValorLiquidacao', 'ValorLiquidado', 'ValorInadimplencia', 'valor']:
         if key in context and isinstance(context[key], (int, float)):
             context[key] = _format_currency(context[key])
+    
+    if 'data' in context:
+        context['data'] = _format_date(context['data'])
 
     # --- LÓGICA DE ANEXOS ---
     final_attachments, attach_warnings = [], []
