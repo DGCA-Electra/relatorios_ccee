@@ -78,7 +78,7 @@
     "send_mode": "display (rascunho) by default",
     "source": "VBA-LFN"
   },
-  "LFRES001": {
+  "LFRES": {
       "variants": {
         "COM_VALOR_GERADOR": {
           "subject_template": "LFRES001 - Liquidação energia de reserva à CCEE - {empresa} - {mes}/{ano}",
