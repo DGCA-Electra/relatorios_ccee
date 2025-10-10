@@ -796,7 +796,7 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> Li
 # Nova API baseada em templates JSON
 # ==============================================================================
 
-def render_email_from_template(report_type: str, row: Dict[str, Any], common: Dict[str, Any], auto_send: bool = False) -> Dict[str, Any]:
+def render_email_from_template(report_type: str, row: Dict[str, Any], common: Dict[str, Any], cfg: Dict[str, Any], auto_send: bool = False) -> Dict[str, Any]:
     templates = load_email_templates()
     if report_type not in templates:
         raise ReportProcessingError(f"Template não encontrado para {report_type}")
