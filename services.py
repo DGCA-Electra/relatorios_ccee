@@ -803,6 +803,17 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
     report_cfg = templates[report_type]
     # contexto base: row + common com alias mais usados
     context: Dict[str, Any] = {**row, **common}
+    context['pdfs_dir'] = cfg.get('pdfs_dir', '')
+    # Gera o nome do arquivo dinamicamente e adiciona ao contexto
+    if 'empresa' in context and 'month' in context and 'year' in context:
+        context['arquivo'] = _build_filename(
+            context['empresa'], 
+            report_type, 
+            context['month'], 
+            str(context['year'])
+        )
+    else:
+        context['arquivo'] = ''
     if report_type == 'SUM001':
         try:
             # Lê o arquivo Excel para buscar as datas de débito/crédito
@@ -841,6 +852,13 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
     context.setdefault('valor', row.get('Valor'))
     context.setdefault('situacao', row.get('Situacao'))
     context.setdefault('TipoAgente', row.get('TipoAgente'))
+    
+    for key in ['ValorLiquidacao', 'ValorLiquidado', 'ValorInadimplencia', 'valor']:
+        if key in context:
+            # A lógica do SUM001 já formata 'valor', então verificamos se já não é uma string
+            if isinstance(context[key], (int, float)):
+                 context[key] = _format_currency(context[key])
+                 
     # Fallbacks para campos comuns de data
     if 'dataaporte' not in context or not context.get('dataaporte'):
         # usa data do common (report_date) ou a coluna 'Data' da linha

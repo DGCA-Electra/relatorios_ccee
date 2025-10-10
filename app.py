@@ -55,8 +55,6 @@ def safe_join_emails(email_field):
         return "; ".join(e.strip() for e in email_field if e)
     return "; ".join([e.strip() for e in str(email_field).split(';') if e.strip()])
 
-# Em app.py, substitua a função show_main_page inteira por esta:
-
 def show_main_page() -> None:
     """Renderiza a página principal de envio de relatórios."""
     all_configs = config.load_configs()
@@ -143,16 +141,6 @@ def show_main_page() -> None:
             for idx in range(preview_limit):
                 # Usa a linha de dados brutos (não formatados) para a lógica do template
                 dados_empresa = df_raw.iloc[idx].to_dict()
-
-                # --- INÍCIO DA NOVA LÓGICA DE FORMATAÇÃO ---
-                # Formata os valores monetários ANTES de enviar para o template
-                if 'ValorLiquidacao' in dados_empresa:
-                    dados_empresa['ValorLiquidacao'] = services._format_currency(dados_empresa['ValorLiquidacao'])
-                if 'ValorLiquidado' in dados_empresa:
-                    dados_empresa['ValorLiquidado'] = services._format_currency(dados_empresa['ValorLiquidado'])
-                if 'ValorInadimplencia' in dados_empresa:
-                    dados_empresa['ValorInadimplencia'] = services._format_currency(dados_empresa['ValorInadimplencia'])
-                # --- FIM DA NOVA LÓGICA DE FORMATAÇÃO ---
 
                 if 'Email' in dados_empresa:
                     dados_empresa['Email'] = safe_join_emails(dados_empresa['Email'])
