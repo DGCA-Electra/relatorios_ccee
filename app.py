@@ -8,7 +8,6 @@ import openpyxl
 from typing import Dict, Any, Optional
 import os
 from utils.dataframe_utils import tratar_valores_df
-from config.config import REPORT_DISPLAY_COLUMNS
 import streamlit.components.v1 as components
 from jinja2 import Environment, FileSystemLoader
 import json

@@ -3,7 +3,8 @@ import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-CONFIG_FILE = Path('config_relatorios.json')
+CONFIG_FILE = Path('config/config_relatorios.json') 
+
 ANALISTAS = [
     'Artur Bello Rodrigues', 'Camila Padovan Baptista', 'Cassiana Unruh',
     'Isabela Loredo', 'Tiago Padilha Foletto'
@@ -17,17 +18,6 @@ PATH_CONFIGS = {
     "sharepoint_root": "ELECTRA COMERCIALIZADORA DE ENERGIA S.A/GE - ECE/DGCA/DGA/CCEE/Relatórios CCEE",
     "contatos_email": "ELECTRA COMERCIALIZADORA DE ENERGIA S.A/GE - ECE/DGCA/DGC/Macro/Contatos de E-mail para Macros.xlsx",
     "user_base": "C:/Users"
-}
-
-# Mapeamento das colunas relevantes por tipo de relatório
-REPORT_DISPLAY_COLUMNS = {
-    "SUM001": ["Empresa", "Email", "Valor", "Data_Debito_Credito"],
-    "LFN001": ["Empresa", "Email", "ValorLiquidacao", "ValorLiquidado", "ValorInadimplencia"],
-    "GFN001": ["Empresa", "Email", "Valor"],
-    "LFRES001": ["Empresa", "Email", "TipoAgente", "Valor", "Data"],
-    "LFRCAP001": ["Empresa", "Email", "Valor", "Data"],
-    "RCAP002": ["Empresa", "Email", "Valor", "Data"],
-    "GFN - LEMBRETE": ["Empresa", "Email", "Valor"]
 }
 
 # Configurações padrão dos relatórios
@@ -66,7 +56,7 @@ DEFAULT_CONFIGS = {
         "sheet_dados": "LFRES002 - Liquidação de Energi",
         "sheet_contatos": "Planilha1",
         "header_row": 42,
-        "data_columns": "Agente:Empresa,Data do Débito:Data,Valor do Débito (R$):Valor,Tipo do Agente:TipoAgente",
+        "data_columns": "Agente:Empresa,Data do Débito:Data,Valor a Liquidar (R$):Valor,Tipo do Agente:TipoAgente",
         "path_template": {
             "excel_dados": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação da Energia de Reserva/LFRES002/ELECTRA_ENERGY_LFRES002_{mes_abrev}_{ano_2dig}.xlsx",
             "pdfs_dir": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação da Energia de Reserva/LFRES001"
