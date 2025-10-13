@@ -1,7 +1,3 @@
-"""
-tests/test_dataframe_utils.py
-Testes unitários para funções utilitárias de DataFrame.
-"""
 import pandas as pd
 from utils.dataframe_utils import tratar_valores_df
 from services import render_email_from_template

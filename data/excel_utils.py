@@ -7,9 +7,7 @@ import openpyxl
 from pathlib import Path
 
 def ler_dados_excel(excel_path: str, sheet_name: str, header_row: int) -> pd.DataFrame:
-    """
-    Carrega dados de uma planilha Excel.
-    """
+
     import logging
     if not Path(excel_path).exists():
         logging.error(f"Arquivo não encontrado: {excel_path}")
@@ -22,9 +20,7 @@ def ler_dados_excel(excel_path: str, sheet_name: str, header_row: int) -> pd.Dat
         raise
 
 def ler_celula_excel(excel_path: str, row: int, col: int) -> str:
-    """
-    Lê o valor de uma célula específica de um arquivo Excel.
-    """
+
     wb = openpyxl.load_workbook(excel_path, data_only=True)
     ws = wb.active
     return str(ws.cell(row=row, column=col).value)

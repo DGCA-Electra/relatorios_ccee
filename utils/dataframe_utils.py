@@ -1,7 +1,3 @@
-"""
-utils/dataframe_utils.py
-Funções utilitárias para tratamento de DataFrames (DRY).
-"""
 import pandas as pd
 import services
 

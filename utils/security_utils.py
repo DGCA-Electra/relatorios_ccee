@@ -1,8 +1,4 @@
-"""
-Utilitários de segurança para validação e sanitização.
-"""
 from __future__ import annotations
-
 import re
 from pathlib import Path
 from typing import Iterable, Tuple

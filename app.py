@@ -12,19 +12,11 @@ import streamlit.components.v1 as components
 from jinja2 import Environment, FileSystemLoader
 import json
 
-# --- Configuração de Logging ---
-# Define o caminho para o diretório de logs
 LOG_DIR = 'logs'
-# Cria o diretório se ele não existir
 os.makedirs(LOG_DIR, exist_ok=True)
-# Define o caminho completo para o arquivo de log
 LOG_FILE = os.path.join(LOG_DIR, 'app.log')
+logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s', encoding='utf-8')
 
-# Configuração básica de logging usando o caminho correto
-logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
-# -----------------------------
-
-# Função para registrar logs
 def registrar_log(mensagem: str) -> None:
     """Registra uma mensagem no log."""
     logging.info(mensagem)
@@ -59,16 +51,13 @@ def show_main_page() -> None:
     all_configs = config.load_configs()
     report_types = list(all_configs.keys())
 
-    # Inicializa o estado da sessão com valores padrão
     init_state()
 
-    # Parâmetros de sessão para evitar repetição
     tipo = st.session_state.report_type
     analista_final = st.session_state.analyst
     mes = st.session_state.month
     ano = st.session_state.year
 
-    # --- RENDERIZAÇÃO DA INTERFACE ---
     st.title("⚡Envio de Relatórios CCEE - DGCA")
     st.info("💡 **Dica:** Você pode enviar relatórios para qualquer analista. Isso é útil durante férias ou ausências.")
 
@@ -89,9 +78,6 @@ def show_main_page() -> None:
     if col2.button("📧 Enviar E-mails", use_container_width=True, type="primary"):
         st.session_state.send_trigger = True
 
-    # --- LÓGICA DE PROCESSAMENTO ---
-
-    # Lógica para o botão "Enviar E-mails"
     if st.session_state.get("send_trigger"):
         with st.spinner("Enviando e-mails... Aguarde. Janelas do Outlook podem abrir para revisão."):
             try:
@@ -102,7 +88,6 @@ def show_main_page() -> None:
                 st.error(f"❌ Erro no envio: {e}")
         st.session_state.send_trigger = False
 
-    # Lógica para o botão "Visualizar Dados"
     if st.session_state.get("preview_trigger"):
         with st.spinner("Carregando dados para visualização... Por favor, aguarde."):
             try:
@@ -115,7 +100,6 @@ def show_main_page() -> None:
                 st.error(f"❌ Erro de processamento: {e}")
         st.session_state.preview_trigger = False
 
-    # Função interna para renderizar o HTML da pré-visualização
     def render_email_preview(subject: str, body_html: str):
         html = f"""
         <html><head><style>
@@ -125,7 +109,6 @@ def show_main_page() -> None:
         """
         components.html(html, height=400, scrolling=True)
 
-    # Bloco unificado para mostrar a visualização dos dados e as prévias de e-mail
     if 'raw_preview_data' in st.session_state:
         df_raw = st.session_state.raw_preview_data
         cfg = st.session_state.get('preview_cfg', {})
@@ -138,7 +121,6 @@ def show_main_page() -> None:
             st.subheader("Pré-visualização do E-mail")
             preview_limit = min(5, len(df_raw))
             for idx in range(preview_limit):
-                # Usa a linha de dados brutos (não formatados) para a lógica do template
                 dados_empresa = df_raw.iloc[idx].to_dict()
 
                 if 'Email' in dados_empresa:
@@ -162,7 +144,6 @@ def show_main_page() -> None:
             if 'preview_cfg' in st.session_state: del st.session_state.preview_cfg
             st.rerun()
 
-    # Bloco para mostrar os resultados após o envio
     if 'results' in st.session_state and st.session_state.results:
         results = st.session_state.results
         form = st.session_state.get('form_data', {})
@@ -187,16 +168,13 @@ def show_config_page() -> None:
     """Renderiza a página de configurações."""
     st.title("⚙️ Configurações do Sistema")
     
-    # Informações principais em uma linha
     st.info("Aqui você pode ajustar a estrutura das planilhas e o mapeamento de colunas para cada tipo de relatório. Os caminhos dos arquivos são montados automaticamente.")
     
     current_configs = config.load_configs()
 
     with st.form("config_form"):
-        # Agrupar configurações por categoria
         st.subheader("📋 Configurações dos Relatórios")
         
-        # Usar tabs para organizar melhor
         tab_names = list(current_configs.keys())
         tabs = st.tabs(tab_names)
         
@@ -204,7 +182,6 @@ def show_config_page() -> None:
             with tabs[i]:
                 st.subheader(f"Configurações para {report_type}")
                 
-                # Campos de configuração
                 col1, col2 = st.columns(2)
                 
                 with col1:
@@ -231,7 +208,6 @@ def show_config_page() -> None:
                         help="Número da linha que contém os cabeçalhos das colunas"
                     )
                 
-                # Mapeamento de colunas
                 data_columns = st.text_area(
                     "Mapeamento de Colunas",
                     value=config_data.get('data_columns', ''),
@@ -240,7 +216,6 @@ def show_config_page() -> None:
                     help="Formato: NomeNoExcel:NomePadrão,OutraColuna:OutroNome"
                 )
                 
-                # Atualizar configuração
                 current_configs[report_type].update({
                     'sheet_dados': sheet_dados,
                     'sheet_contatos': sheet_contatos,
@@ -248,7 +223,6 @@ def show_config_page() -> None:
                     'data_columns': data_columns
                 })
         
-        # Botão de salvar
         if st.form_submit_button("💾 Salvar Configurações"):
             try:
                 config.save_configs(current_configs)
@@ -312,15 +286,10 @@ def show_config_page() -> None:
                 attachments_str = "\n".join(edit_block.get('attachments', []))
                 attachments_edit = st.text_area("Anexos (um por linha)", value=attachments_str, height=100, key=f"att_{key}_{selected_variant}")
 
-                # Inserção rápida de placeholders
-                # Placeholders: removidos da UI para simplificar
-
                 if st.button("Salvar Template", key=f"save_simple_{key}_{selected_variant}"):
-                    # aplicar mudanças no bloco selecionado
                     new_block = dict(edit_block)
                     new_block['subject_template'] = subj
                     if 'body_html_credit' in new_block or 'body_html_debit' in new_block:
-                        # se for LFN001 com variantes de crédito/débito, grava em body_html por simplicidade
                         new_block['body_html'] = body
                     else:
                         new_block['body_html'] = body
@@ -339,7 +308,6 @@ def show_config_page() -> None:
 
                 live_preview = st.checkbox("Prévia instantânea", value=False, key=f"liveprev_{key}_{selected_variant}")
                 if live_preview:
-                    # renderiza continuamente com base nos dados atuais
                     sample = st.session_state.get('preview_data')
                     if sample is not None and not sample.empty:
                         row = sample.iloc[0].to_dict()
@@ -380,14 +348,13 @@ def main() -> None:
     """Função principal da aplicação."""
     st.image("static/logo.png", width=250)
 
-    # Navegação principal
     st.sidebar.title("🧭 Navegação")
     page_options = ["Envio de Relatórios", "Configurações"]
     page = st.sidebar.radio("Escolha a página:", page_options, label_visibility="hidden", key="sidebar_radio")
     
     if page == "Envio de Relatórios":
         show_main_page()
-    else:  # Configurações
+    else:
         show_config_page()
 
 if __name__ == "__main__":

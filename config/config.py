@@ -13,14 +13,12 @@ MESES = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
          'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO']
 ANOS = [str(y) for y in range(2025, 2030)]
 
-# Configurações de caminho centralizadas
 PATH_CONFIGS = {
     "sharepoint_root": "ELECTRA COMERCIALIZADORA DE ENERGIA S.A/GE - ECE/DGCA/DGA/CCEE/Relatórios CCEE",
     "contatos_email": "ELECTRA COMERCIALIZADORA DE ENERGIA S.A/GE - ECE/DGCA/DGC/Macro/Contatos de E-mail para Macros.xlsx",
     "user_base": "C:/Users"
 }
 
-# Configurações padrão dos relatórios
 DEFAULT_CONFIGS = {
     "GFN001": {
         "sheet_dados": "GFN003 - Garantia Financeira po",
@@ -101,9 +99,8 @@ def get_user_paths() -> Dict[str, str]:
     Returns:
         Dicionário com os caminhos configurados
     """
-    # Usar caminho padrão fixo baseado no usuário atual do sistema
     import os
-    current_user = os.getenv('USERNAME', 'malik.mourad')  # Fallback para malik.mourad
+    current_user = os.getenv('USERNAME', 'malik.mourad')
     user_base = f"{PATH_CONFIGS['user_base']}/{current_user}"
     
     return {
@@ -126,7 +123,6 @@ def build_report_paths(report_type: str, ano: str, mes: str) -> Dict[str, str]:
     if report_type not in DEFAULT_CONFIGS:
         raise ValueError(f"Tipo de relatório '{report_type}' não reconhecido")
     
-    # Mapeamento de meses para formato numérico
     meses_map = {
         'JANEIRO': '01', 'FEVEREIRO': '02', 'MARÇO': '03', 'ABRIL': '04',
         'MAIO': '05', 'JUNHO': '06', 'JULHO': '07', 'AGOSTO': '08',
@@ -135,16 +131,13 @@ def build_report_paths(report_type: str, ano: str, mes: str) -> Dict[str, str]:
     
     mes_num = meses_map.get(mes.upper(), '01')
     ano_mes = f"{ano}{mes_num}"
-    mes_abrev = mes.lower()[:3]  # jun, mai, abr, etc.
-    ano_2dig = ano[-2:]  # 25, 26, etc.
+    mes_abrev = mes.lower()[:3]
+    ano_2dig = ano[-2:]
     
-    # Obter caminhos do usuário
     user_paths = get_user_paths()
     
-    # Obter template de caminhos do relatório
     path_template = DEFAULT_CONFIGS[report_type].get("path_template", {})
     
-    # Construir caminhos substituindo as variáveis
     paths = {}
     for key, template in path_template.items():
         paths[key] = template.format(
@@ -155,7 +148,6 @@ def build_report_paths(report_type: str, ano: str, mes: str) -> Dict[str, str]:
             ano_2dig=ano_2dig
         )
     
-    # Adicionar caminho dos contatos
     paths["excel_contatos"] = user_paths["contratos_email_path"]
     
     return paths
@@ -175,12 +167,10 @@ def load_configs() -> Dict[str, Any]:
         with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
             loaded_configs = json.load(f)
             
-            # Garantir que todas as configurações padrão estejam presentes
             for key, value in DEFAULT_CONFIGS.items():
                 if key not in loaded_configs:
                     loaded_configs[key] = value
                 else:
-                    # Mesclar configurações existentes com padrões
                     for default_key, default_value in value.items():
                         if default_key not in loaded_configs[key]:
                             loaded_configs[key][default_key] = default_value
@@ -221,7 +211,6 @@ def validate_config(config: Dict[str, Any], report_type: str) -> bool:
             print(f"Campo obrigatório '{field}' não encontrado em {report_type}")
             return False
     
-    # Validar se header_row é um número
     try:
         int(config["header_row"])
     except (ValueError, TypeError):

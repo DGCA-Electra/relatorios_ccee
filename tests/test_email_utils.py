@@ -8,7 +8,6 @@ def test_render_placeholders_sum001():
     assert 'SUM001' in res['subject']
     assert res['missing_placeholders'] == []
 
-# Template Jinja2 simplificado para teste
 TEST_TEMPLATE = """
 <p>Prezado(a) {{ analista }},</p>
 <p>Empresa: {{ empresa }}</p>
@@ -26,7 +25,6 @@ def test_montar_corpo_email_jinja2():
     assert "Empresa: Eletrobras" in corpo
     assert "Valor: R$ 1000,00" in corpo
 
-# Teste de campos faltantes
 
 def test_montar_corpo_email_campos_faltantes():
     dados = {
@@ -34,5 +32,5 @@ def test_montar_corpo_email_campos_faltantes():
     }
     corpo = montar_corpo_email(dados, TEST_TEMPLATE)
     assert "Prezado(a) Maria" in corpo
-    assert "Empresa: " in corpo  # Campo vazio
-    assert "Valor: " in corpo    # Campo vazio
+    assert "Empresa: " in corpo  
+    assert "Valor: " in corpo  
