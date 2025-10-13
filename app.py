@@ -70,7 +70,7 @@ def show_main_page() -> None:
     ano = st.session_state.year
 
     # --- RENDERIZAÇÃO DA INTERFACE ---
-    st.title("📊 Envio de Relatórios CCEE - DGCA")
+    st.title("⚡Envio de Relatórios CCEE - DGCA")
     st.info("💡 **Dica:** Você pode enviar relatórios para qualquer analista. Isso é útil durante férias ou ausências.")
 
     st.header("Parâmetros de Envio")
@@ -85,7 +85,7 @@ def show_main_page() -> None:
         st.session_state.year = st.selectbox("Ano", options=config.ANOS, index=config.ANOS.index(str(ano)) if str(ano) in config.ANOS else 0)
     
     col1, col2 = st.columns(2)
-    if col1.button("👁️ Visualizar Dados", use_container_width=True):
+    if col1.button("📊 Visualizar Dados", use_container_width=True):
         st.session_state.preview_trigger = True
     if col2.button("📧 Enviar E-mails", use_container_width=True, type="primary"):
         st.session_state.send_trigger = True
