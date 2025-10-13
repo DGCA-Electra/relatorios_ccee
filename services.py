@@ -236,6 +236,15 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
         context["ValorLiquidado"] = _parse_brazilian_number(row.get("ValorLiquidado", 0))
         context["ValorInadimplencia"] = _parse_brazilian_number(row.get("ValorInadimplencia", 0))
 
+    if report_type in ["GFN001", "GFN - LEMBRETE"]:
+        try:
+            df_raw_gfn = _load_excel_data(cfg["excel_dados"], cfg["sheet_dados"], -1)
+            data_aporte = df_raw_gfn.iloc[23, 0]
+            context["dataaporte"] = data_aporte
+        except Exception as e:
+            logging.warning(f"GFN: Não foi possível extrair a data do aporte do Excel: {e}")
+            context["dataaporte"] = None
+
     if report_type == "SUM001":
         try:
             df_raw_sum = _load_excel_data(cfg["excel_dados"], cfg["sheet_dados"], -1)
@@ -247,11 +256,11 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
         if situacao == "Crédito":
             context["texto1"] = "crédito"
             context["texto2"] = "ressaltamos que esse crédito está sujeito ao rateio de inadimplência dos agentes devedores da Câmara, conforme Resolução ANEEL nº 552, de 14/10/2002."
-            context["data"] = data_credito
+            context["data_liquidacao"] = data_credito
         elif situacao == "Débito":
             context["texto1"] = "débito"
             context["texto2"] = "teoricamente a conta possui o saldo necessário, mas recomendamos verificar e disponibilizar o valor com 1 (um) dia útil de antecedência."
-            context["data"] = data_debito
+            context["data_liquidacao"] = data_debito
         else:
             context["texto1"], context["texto2"] = "transação", "verifique os dados na planilha."
         context["valor"] = abs(parsed_valor)
@@ -270,6 +279,10 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
     
     if "data" in context and context["data"] is not None:
         context["data"] = _format_date(context["data"])
+    
+    for key in ["data", "dataaporte", "data_liquidacao"]:
+        if key in context and context.get(key) is not None:
+            context[key] = _format_date(context[key])
 
     attachments = []
     filename = _build_filename(str(row.get("Empresa","")), report_type, common["month_long"].upper(), str(common.get("year","")))
@@ -353,7 +366,6 @@ def _load_and_process_data(cfg: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.DataFr
     }, inplace=True)
     
     return df_dados, df_contatos
-
 
 def process_reports(report_type: str, analyst: str, month: str, year: str) -> List[Dict[str, Any]]:
     """
