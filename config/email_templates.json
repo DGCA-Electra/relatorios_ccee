@@ -90,7 +90,7 @@
         },
         "ZERO_VALOR": {
           "subject_template": "LFRES001 - Liquidação energia de reserva à CCEE - {empresa} - {mes}/{ano}",
-          "body_html": "<p>Prezado(a),</p><p>Segue anexo o relatório LFRES0{mes}, referente à Liquidação de Energia de Reserva de <strong>{mesext}/{ano}</strong>.</p><p>Para esse mês os recursos disponíveis na Conta de Energia de Reserva - CONER são suficientes para o pagamento de todas as obrigações vinculadas à energia de reserva, portanto, não será realizada a cobrança do Encargo de Energia de Reserva - EER no dia <strong>{data}</strong>.</p><p>Estamos à disposição para mais informações.</p>"
+          "body_html": "<p>Prezado(a),</p><p>Segue anexo o relatório LFRES001, referente à Liquidação de Energia de Reserva de <strong>{mesext}/{ano}</strong>.</p><p>Para esse mês os recursos disponíveis na Conta de Energia de Reserva - CONER são suficientes para o pagamento de todas as obrigações vinculadas à energia de reserva, portanto, não será realizada a cobrança do Encargo de Energia de Reserva - EER no dia <strong>{data}</strong>.</p><p>Estamos à disposição para mais informações.</p>"
         }
       }
     },

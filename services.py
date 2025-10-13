@@ -156,14 +156,7 @@ def save_email_templates(data: Dict[str, Any]) -> None:
 def resolve_variant(report_type: str, report_config: Dict[str, Any], context: Dict[str, Any]) -> Tuple[Dict[str, Any], str]:
     """
     Resolve qual variante do template usar baseado no tipo de relatório e contexto.
-    
-    Args:
-        report_type: Tipo do relatório (ex: LFRES001)
-        report_config: Configuração do template
-        context: Contexto com dados da empresa e valores parseados
-        
-    Returns:
-        Tupla com (template_selecionado, nome_da_variante)
+    Retorna (template_selecionado, nome_da_variante).
     """
     if "variants" not in report_config:
         return report_config, "default"
@@ -171,27 +164,37 @@ def resolve_variant(report_type: str, report_config: Dict[str, Any], context: Di
     variants = report_config["variants"]
 
     if report_type.startswith("LFRES"):
-        # O valor já vem parseado como float do contexto
-        valor = context.get("valor", 0)
-        tipo_agente = str(context.get("TipoAgente", "")).strip()
-        
-        logging.info(f"      🔄 resolve_variant: valor={valor} (type={type(valor).__name__}), tipo_agente='{tipo_agente}'")
+        # Normaliza/obtém valor numérico
+        raw_val = context.get("valor", 0.0)
+        try:
+            valor = float(raw_val)
+        except (ValueError, TypeError):
+            # fallback para parser BR (garanta que _parse_brazilian_number exista no módulo)
+            try:
+                valor = _parse_brazilian_number(raw_val)
+            except Exception:
+                valor = 0.0
 
-        # Lógica de seleção de variante para LFRES
-        if valor == 0 or valor == 0.0:
+        valor_abs = abs(valor)
+        tipo_agente = str(context.get("TipoAgente", "")).strip()
+
+        logging.info(f"resolve_variant LFRES - empresa={context.get('empresa')}, raw_val={raw_val}, valor={valor}, tipo_agente={tipo_agente}")
+
+        # considera 'com valor' quando o módulo do valor é significativo
+        if valor_abs > 1e-6:
             if tipo_agente == "Gerador-EER":
-                logging.info(f"      → Selecionado: SKIP (Gerador-EER com valor 0)")
-                return {}, "SKIP"
-            logging.info(f"      → Selecionado: ZERO_VALOR")
-            return variants.get("ZERO_VALOR", {}), "ZERO_VALOR"
-        
-        # Se o valor não for zero
-        if tipo_agente == "Gerador-EER":
-            logging.info(f"      → Selecionado: COM_VALOR_GERADOR")
-            return variants.get("COM_VALOR_GERADOR", {}), "COM_VALOR_GERADOR"
-        else:
-            logging.info(f"      → Selecionado: COM_VALOR_OUTROS")
+                logging.info("      → Selecionado: COM_VALOR_GERADOR")
+                return variants.get("COM_VALOR_GERADOR", {}), "COM_VALOR_GERADOR"
+            logging.info("      → Selecionado: COM_VALOR_OUTROS")
             return variants.get("COM_VALOR_OUTROS", {}), "COM_VALOR_OUTROS"
+
+        # caso valor praticamente zero
+        if tipo_agente == "Gerador-EER":
+            logging.info("      → Selecionado: SKIP (Gerador-EER com valor 0)")
+            return {}, "SKIP"
+
+        logging.info("      → Selecionado: ZERO_VALOR")
+        return variants.get("ZERO_VALOR", {}), "ZERO_VALOR"
 
     # Para outros tipos de relatório, retorna a primeira variante ou o config padrão
     first_key = next(iter(variants), "default")
@@ -199,19 +202,6 @@ def resolve_variant(report_type: str, report_config: Dict[str, Any], context: Di
 
 
 def render_email_from_template(report_type: str, row: Dict[str, Any], common: Dict[str, Any], cfg: Dict[str, Any], auto_send: bool = False) -> Optional[Dict[str, Any]]:
-    """
-    Renderiza um e-mail a partir do template e dados da empresa.
-    
-    Args:
-        report_type: Tipo do relatório
-        row: Dados da linha do DataFrame (empresa)
-        common: Dados comuns (mês, ano, analista)
-        cfg: Configurações do relatório
-        auto_send: Se True, cria o rascunho no Outlook
-        
-    Returns:
-        Dicionário com subject, body e attachments ou None se deve pular
-    """
     templates = load_email_templates()
     
     # 1. Identificação do Template
@@ -230,7 +220,6 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
     context["ano"] = common.get("year")
     context["data"] = row.get("Data")
     
-    # ✅ CORREÇÃO CRÍTICA: Parse do valor ANTES de qualquer lógica
     raw_valor = row.get("Valor", 0)
     parsed_valor = _parse_brazilian_number(raw_valor)
     context["valor"] = parsed_valor  # Agora é float, não string!

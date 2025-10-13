@@ -33,7 +33,7 @@
         "sheet_dados": "LFRES002 - Liquidação de Energi",
         "sheet_contatos": "Planilha1",
         "header_row": 42,
-        "data_columns": "Agente:Empresa,Data do Débito:Data,Valor do Débito (R$):Valor,Tipo do Agente:TipoAgente",
+        "data_columns": "Agente:Empresa,Data do Débito:Data,Valor a Liquidar (R$):Valor,Tipo do Agente:TipoAgente",
         "path_template": {
             "excel_dados": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação da Energia de Reserva/LFRES002/ELECTRA_ENERGY_LFRES002_{mes_abrev}_{ano_2dig}.xlsx",
             "pdfs_dir": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação da Energia de Reserva/LFRES001"
