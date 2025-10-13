@@ -25,7 +25,10 @@ st.set_page_config(
     page_title="Envio de Relatórios CCEE",
     page_icon="static/icon.png",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed",
+    menu_items={
+        'About': "Aplicação para automação de envio de e-mails DGCA."
+    }
 )
 
 def init_state():
