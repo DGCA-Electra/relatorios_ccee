@@ -1,5 +1,5 @@
 import pandas as pd
-import services
+import src.services as services
 
 def tratar_valores_df(df: pd.DataFrame, currency_cols=None, date_cols=None, fill_map=None):
     currency_cols = currency_cols or []

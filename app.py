@@ -1,8 +1,8 @@
 import streamlit as st
 import os
 import logging
-from view.main_page import show_main_page
-from view.config_page import show_config_page
+from src.view.main_page import show_main_page
+from src.view.config_page import show_config_page
 
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)

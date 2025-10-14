@@ -10,8 +10,8 @@ from typing import Dict, List, Any, Optional, Tuple
 import json
 from jinja2 import Environment, BaseLoader, meta
 import logging
-from config.config import load_configs, MESES, build_report_paths
-from utils.security_utils import sanitize_html, sanitize_subject
+from src.config.config import load_configs, MESES, build_report_paths
+from src.utils.security_utils import sanitize_html, sanitize_subject
 
 class ReportProcessingError(Exception):
     pass
@@ -22,7 +22,6 @@ try:
 except ImportError:
     WIN32_AVAILABLE = False
     logging.warning("win32com não disponível. Modo de simulação ativado.")
-
 
 TEMPLATES_JSON_PATH = "config/email_templates.json"
 

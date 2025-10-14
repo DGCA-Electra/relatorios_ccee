@@ -1,6 +1,6 @@
 import streamlit as st
-import config.config as config
-import services
+import src.config.config as config
+import src.services as services
 import json
 from typing import Any
 import streamlit.components.v1 as components

@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
-import config.config as config
-import services
-from utils.dataframe_utils import tratar_valores_df
 import streamlit.components.v1 as components
+import streamlit as st
+import src.config.config as config
+import src.services as services
+from src.utils.dataframe_utils import tratar_valores_df
 
 def init_state():
     defaults = {
