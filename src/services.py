@@ -2,19 +2,18 @@ import pandas as pd
 from pathlib import Path
 import sys
 import pythoncom
-from datetime import datetime
 import re
 import streamlit as st
-import os
 from typing import Dict, List, Any, Optional, Tuple
-import json
 from jinja2 import Environment, BaseLoader, meta
 import logging
-from src.config.config import load_configs, MESES, build_report_paths
+from src.config.config import MESES
+from src.config.config_manager import load_configs, build_report_paths
 from src.utils.security_utils import sanitize_html, sanitize_subject
-
-class ReportProcessingError(Exception):
-    pass
+from src.utils.data_utils import parse_brazilian_number, format_currency, format_date
+from src.utils.file_utils import load_excel_data, find_attachment, load_email_templates
+from src.handlers.report_handlers import REPORT_HANDLERS
+from src.utils.file_utils import ReportProcessingError
 
 try:
     import win32com.client as win32
@@ -23,32 +22,7 @@ except ImportError:
     WIN32_AVAILABLE = False
     logging.warning("win32com não disponível. Modo de simulação ativado.")
 
-TEMPLATES_JSON_PATH = "config/email_templates.json"
-
-def _parse_brazilian_number(val: Any) -> float:
-    """Converte 'R$ 1.234,56' ou '(1.234,56)' ou 1234.56 para float. Retorna 0.0 em erro."""
-    if val is None:
-        return 0.0
-    if isinstance(val, (int, float)):
-        return float(val)
-    s = str(val).strip()
-    if s == "":
-        return 0.0
-    is_neg = False
-    if s.startswith("(") and s.endswith(")"):
-        is_neg = True
-        s = s[1:-1]
-    s = s.replace("R$", "").replace("r$", "").replace("\xa0", "").replace(" ", "")
-    s = s.replace(".", "")
-    s = s.replace(",", ".")
-    s = re.sub(r"[^0-9\.-]", "", s)
-    try:
-        n = float(s) if s not in ("", "-", ".") else 0.0
-        return -n if is_neg else n
-    except Exception:
-        return 0.0
-
-def _create_outlook_draft(recipient: str, subject: str, body: str, attachments: List[Path]) -> None:
+def create_outlook_draft(recipient: str, subject: str, body: str, attachments: List[Path]) -> None:
     if not WIN32_AVAILABLE:
         print("-- MODO DE SIMULAÇÃO ---")
         print(f"PARA: {recipient}")
@@ -74,60 +48,13 @@ def _create_outlook_draft(recipient: str, subject: str, body: str, attachments: 
     finally:
         pythoncom.CoUninitialize()
 
-def _build_filename(company: str, report_type: str, month: str, year: str) -> str:
+def build_filename(company: str, report_type: str, month: str, year: str) -> str:
     company_clean = str(company).strip()
     company_part = re.sub(r"[\s_-]+", "_", company_clean).upper()
     report_part = str(report_type).upper()
     month_part = str(month).lower()[:3]
     year_part = str(year)[-2:]
     return f"{company_part}_{report_part}_{month_part}_{year_part}.pdf"
-
-def _format_currency(value: Any) -> str:
-    try:
-        val = float(value)
-        return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    except (ValueError, TypeError):
-        return "R$ 0,00"
-
-def _format_date(date_value: Any) -> str:
-    """Formata uma data para o formato brasileiro (dd/mm/aaaa)."""
-    try:
-        if date_value is None or pd.isna(date_value):
-            return "Data não informada"
-        return pd.to_datetime(date_value).strftime("%d/%m/%Y")
-    except (ValueError, TypeError):
-        return "Data Inválida"
-
-def _load_excel_data(excel_path: str, sheet_name: str, header_row: int) -> pd.DataFrame:
-    """Carrega dados de uma planilha Excel."""
-    if not Path(excel_path).exists():
-        raise FileNotFoundError(f"Arquivo não encontrado: {excel_path}")
-    if header_row == -1:
-        return pd.read_excel(Path(excel_path), sheet_name=sheet_name, header=None)
-    return pd.read_excel(Path(excel_path), sheet_name=sheet_name, header=header_row)
-
-def _find_attachment(pdf_dir: str, filename: str) -> Optional[Path]:
-    """Procura por um arquivo PDF no diretório especificado."""
-    attachment_path = Path(pdf_dir) / filename
-    if attachment_path.exists():
-        return attachment_path
-    logging.warning(f"Anexo não encontrado no caminho principal: {attachment_path}")
-    return None
-
-def load_email_templates() -> Dict[str, Any]:
-    try:
-        with open(TEMPLATES_JSON_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        raise ReportProcessingError(f"Falha ao carregar {TEMPLATES_JSON_PATH}: {e}")
-
-def save_email_templates(data: Dict[str, Any]) -> None:
-    """Salva os templates de e-mail no arquivo JSON."""
-    try:
-        with open(TEMPLATES_JSON_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        raise ReportProcessingError(f"Falha ao salvar {TEMPLATES_JSON_PATH}: {e}")
 
 def resolve_variant(report_type: str, report_config: Dict[str, Any], context: Dict[str, Any]) -> Tuple[Dict[str, Any], str]:
     if "variants" not in report_config:
@@ -141,7 +68,7 @@ def resolve_variant(report_type: str, report_config: Dict[str, Any], context: Di
             valor = float(raw_val)
         except (ValueError, TypeError):
             try:
-                valor = _parse_brazilian_number(raw_val)
+                valor = parse_brazilian_number(raw_val)
             except Exception:
                 valor = 0.0
 
@@ -169,95 +96,26 @@ def resolve_variant(report_type: str, report_config: Dict[str, Any], context: Di
 
 def render_email_from_template(report_type: str, row: Dict[str, Any], common: Dict[str, Any], cfg: Dict[str, Any], auto_send: bool = False) -> Optional[Dict[str, Any]]:
     templates = load_email_templates()
-    
     template_key = "LFRES" if report_type.startswith("LFRES") else report_type
-    if template_key not in templates:
+    report_cfg = templates.get(template_key)
+    if not report_cfg:
         raise ReportProcessingError(f"Template para '{template_key}' não encontrado.")
-    report_cfg = templates[template_key]
 
     context = {**row, **common, **cfg}
-    
-    context["empresa"] = row.get("Empresa")
-    context["mesext"] = common.get("month_long")
-    context["mes"] = common.get("month_num")
-    context["ano"] = common.get("year")
-    context["data"] = row.get("Data")
-    context["assinatura"] = common.get("analyst")
-    
-    raw_valor = row.get("Valor", 0)
-    parsed_valor = _parse_brazilian_number(raw_valor)
-    context["valor"] = parsed_valor
-    
-    logging.info(f"Processando {context.get('empresa')} - Tipo: {report_type} - Valor original: '{raw_valor}' -> Parseado: {parsed_valor}")
+    context.update({
+        "empresa": row.get("Empresa"),
+        "mesext": common.get("month_long"),
+        "mes": common.get("month_num"),
+        "ano": common.get("year"),
+        "data": row.get("Data"),
+        "assinatura": common.get("analyst"),
+        "valor": parse_brazilian_number(row.get("Valor", 0))
+    })
+    logging.info(f"Processando {context['empresa']} - Tipo: {report_type} - Valor original: '{row.get('Valor', 0)}' -> Parseado: {context['valor']}")
 
-    tipo_agente = str(row.get("TipoAgente", "")).strip()
-    
-    if template_key.startswith("LFRES"):
-        situacao = str(row.get("Situacao", "")).strip()
-
-        data_linha = row.get("Data")
-        if data_linha is not None and not pd.isna(data_linha) and str(data_linha).strip() != "":
-            context["data"] = data_linha
-        else:
-            try:
-                df_raw_data_lfres = _load_excel_data(cfg["excel_dados"], cfg["sheet_dados"], -1)
-                data_debito = df_raw_data_lfres.iloc[26, 0]
-                data_credito = df_raw_data_lfres.iloc[26, 1]
-                context["data"] = data_credito if situacao == "Crédito" else data_debito
-            except Exception as e:
-                logging.warning(f"LFRES: Não foi possível extrair a data do Excel: {e}")
-                context["data"] = None
-
-        context["TipoAgente"] = tipo_agente
-        
-        logging.info(f"LFRES: TipoAgente='{tipo_agente}', Valor={parsed_valor}, Situacao='{situacao}'")
-
-    if report_type == "LFN001":
-        context["ValorLiquidacao"] = _parse_brazilian_number(row.get("ValorLiquidacao", 0))
-        context["ValorLiquidado"] = _parse_brazilian_number(row.get("ValorLiquidado", 0))
-        context["ValorInadimplencia"] = _parse_brazilian_number(row.get("ValorInadimplencia", 0))
-
-    if report_type in ["GFN001", "GFN - LEMBRETE"]:
-        try:
-            df_raw_gfn = _load_excel_data(cfg["excel_dados"], cfg["sheet_dados"], -1)
-            data_aporte = df_raw_gfn.iloc[23, 0]
-            context["dataaporte"] = data_aporte
-        except Exception as e:
-            logging.warning(f"GFN: Não foi possível extrair a data do aporte do Excel: {e}")
-            context["dataaporte"] = None
-
-    if report_type == "SUM001":
-        try:
-            df_raw_sum = _load_excel_data(cfg["excel_dados"], cfg["sheet_dados"], -1)
-            data_debito, data_credito = df_raw_sum.iloc[23, 0], df_raw_sum.iloc[23, 1]
-        except Exception:
-            data_debito, data_credito = None, None
-        
-        situacao = str(row.get("Situacao", "")).strip()
-        if situacao == "Crédito":
-            context["texto1"] = "crédito"
-            context["texto2"] = "Ressaltamos que esse crédito está sujeito ao rateio de inadimplência dos agentes devedores da Câmara, conforme Resolução ANEEL nº 552, de 14/10/2002."
-            context["data_liquidacao"] = data_credito
-        elif situacao == "Débito":
-            context["texto1"] = "débito"
-            context["texto2"] = "Teoricamente a conta possui o saldo necessário, mas recomendamos verificar e disponibilizar o valor com 1 (um) dia útil de antecedência."
-            context["data_liquidacao"] = data_debito
-        else:
-            context["texto1"], context["texto2"] = "transação", "verifique os dados na planilha."
-        context["valor"] = abs(parsed_valor)
-
-    if report_type in ["LFRCAP001", "RCAP002"]:
-
-        if report_type == "LFRCAP001":
-            try:
-                df_raw_lfrcap = _load_excel_data(cfg["excel_dados"], cfg["sheet_dados"], -1)
-                data_aporte = df_raw_lfrcap.iloc[34, 0]
-                context["dataaporte"] = data_aporte
-            except Exception as e:
-                logging.warning(f"LFRCAP001: Não foi possível extrair a data do aporte do Excel: {e}")
-                context["dataaporte"] = None
-        else:
-             context["dataaporte"] = row.get("Data")
+    if report_type in REPORT_HANDLERS:
+        handler_func = REPORT_HANDLERS[report_type]
+        context = handler_func(context, row, cfg, parsed_valor=context['valor'])
 
     selected_template, variant_name = resolve_variant(template_key, report_cfg, context)
     
@@ -269,19 +127,19 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
 
     for key in ["valor", "ValorLiquidacao", "ValorLiquidado", "ValorInadimplencia"]:
         if key in context and context[key] is not None:
-            context[key] = _format_currency(context[key])
+            context[key] = format_currency(context[key])
     
     if "data" in context and context["data"] is not None:
-        context["data"] = _format_date(context["data"])
+        context["data"] = format_date(context["data"])
     
     for key in ["data", "dataaporte", "data_liquidacao"]:
         if key in context and context.get(key) is not None:
-            context[key] = _format_date(context[key])
+            context[key] = format_date(context[key])
 
     attachments = []
-    filename = _build_filename(str(row.get("Empresa","")), report_type, common["month_long"].upper(), str(common.get("year","")))
+    filename = build_filename(str(row.get("Empresa","")), report_type, common["month_long"].upper(), str(common.get("year","")))
     if cfg.get("pdfs_dir"):
-        path = _find_attachment(cfg["pdfs_dir"], filename)
+        path = find_attachment(cfg["pdfs_dir"], filename)
         if path: 
             attachments.append(path)
             logging.info(f"Anexo encontrado: {filename}")
@@ -289,10 +147,10 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
             logging.warning(f"Anexo não encontrado: {filename}")
 
     if report_type == "GFN001":
-        filename_sum = _build_filename(str(row.get("Empresa","")), "SUM001", common["month_long"].upper(), str(common.get("year","")))
+        filename_sum = build_filename(str(row.get("Empresa","")), "SUM001", common["month_long"].upper(), str(common.get("year","")))
         base_dir = Path(cfg.get("pdfs_dir", ""))
         memoria_calc_dir = base_dir.parent.parent / "Sumário" / "SUM001 - Memória_de_Cálculo"
-        sum_path = _find_attachment(str(memoria_calc_dir), filename_sum)
+        sum_path = find_attachment(str(memoria_calc_dir), filename_sum)
         if sum_path: 
             attachments.append(sum_path)
             logging.info(f"Anexo SUM001 encontrado: {filename_sum}")
@@ -337,18 +195,18 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
 
     if auto_send:
         result["body"] += f"<p>Atenciosamente,</p><p><strong>{common['analyst']}</strong></p>"
-        _create_outlook_draft(row.get("Email", ""), result["subject"], result["body"], result["attachments"])
+        create_outlook_draft(row.get("Email", ""), result["subject"], result["body"], result["attachments"])
     
     return result
 
-def _load_and_process_data(cfg: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def load_and_process_data(cfg: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.DataFrame]:
     header = int(cfg.get("header_row", 0))
 
     logging.info(f"Carregando dados de: {cfg['excel_dados']}")
-    df_dados = _load_excel_data(cfg["excel_dados"], cfg["sheet_dados"], header)
+    df_dados = load_excel_data(cfg["excel_dados"], cfg["sheet_dados"], header)
 
     logging.info(f"Carregando contatos de: {cfg['excel_contatos']}")
-    df_contatos = _load_excel_data(cfg["excel_contatos"], cfg["sheet_contatos"], 0)
+    df_contatos = load_excel_data(cfg["excel_contatos"], cfg["sheet_contatos"], 0)
     
     column_mapping = dict(item.split(":") for item in cfg["data_columns"].split(","))
     df_dados.rename(columns=column_mapping, inplace=True)
@@ -371,7 +229,7 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> Li
 
     cfg.update(build_report_paths(report_type, year, month))
     
-    df_dados, df_contatos = _load_and_process_data(cfg)
+    df_dados, df_contatos = load_and_process_data(cfg)
     
     df_merged = pd.merge(df_dados, df_contatos, on="Empresa", how="left")
     df_filtered = df_merged[df_merged["Analista"] == analyst].copy()
@@ -409,7 +267,7 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> Li
                 results.append({
                     "empresa": row["Empresa"],
                     "data": row.get("Data", "N/A"),
-                    "valor": _format_currency(row.get("Valor", 0)),
+                    "valor": format_currency(row.get("Valor", 0)),
                     "email": row["Email"], 
                     "anexos_count": len(email_data.get("attachments", [])), 
                     "created_count": created_count
@@ -454,7 +312,7 @@ def preview_dados(report_type: str, analyst: str, month: str, year: str) -> Tupl
     report_paths = build_report_paths(report_type, year, month)
     cfg.update(report_paths)
     
-    df_dados, df_contatos = _load_and_process_data(cfg)
+    df_dados, df_contatos = load_and_process_data(cfg)
     
     df_merged = pd.merge(df_dados, df_contatos, on="Empresa", how="left")
     df_filtered = df_merged[df_merged["Analista"] == analyst].copy()

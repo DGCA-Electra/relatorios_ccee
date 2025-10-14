@@ -1,9 +1,12 @@
 import streamlit as st
 import src.config.config as config
+from src.config.config_manager import load_configs, save_configs
 import src.services as services
 import json
 from typing import Any
 import streamlit.components.v1 as components
+
+TEMPLATES_JSON_PATH = "config/email_templates.json"
 
 def registrar_log(mensagem: str):
     import logging
@@ -15,7 +18,7 @@ def show_config_page() -> None:
     
     st.info("Aqui você pode ajustar a estrutura das planilhas e o mapeamento de colunas para cada tipo de relatório. Os caminhos dos arquivos são montados automaticamente.")
     
-    current_configs = config.load_configs()
+    current_configs = load_configs()
 
     with st.form("config_form"):
         st.subheader("📋 Configurações dos Relatórios")
@@ -70,7 +73,7 @@ def show_config_page() -> None:
         
         if st.form_submit_button("💾 Salvar Configurações"):
             try:
-                config.save_configs(current_configs)
+                save_configs(current_configs)
                 st.success("✅ Configurações salvas com sucesso!")
             except Exception as e:
                 st.error(f"❌ Erro ao salvar configurações: {e}")
