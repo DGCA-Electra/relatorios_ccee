@@ -1,10 +1,11 @@
 import streamlit as st
 import pandas as pd
-import streamlit.components.v1 as components
-import streamlit as st
+import logging
 import src.config.config as config
+from src.config.config_manager import load_configs
 import src.services as services
 from src.utils.dataframe_utils import tratar_valores_df
+import streamlit.components.v1 as components
 
 def init_state():
     defaults = {
@@ -26,11 +27,11 @@ def safe_join_emails(email_field):
 
 def show_main_page() -> None:
     """Renderiza a página principal de envio de relatórios."""
-    all_configs = config.load_configs()
+    all_configs = load_configs() 
     report_types = list(all_configs.keys())
 
     init_state()
-
+    
     tipo = st.session_state.report_type
     analista_final = st.session_state.analyst
     mes = st.session_state.month

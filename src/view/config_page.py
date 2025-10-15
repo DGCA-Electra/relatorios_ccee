@@ -1,22 +1,18 @@
 import streamlit as st
-import src.config.config as config
-from src.config.config_manager import load_configs, save_configs
-import src.services as services
 import json
+import logging
 from typing import Any
 import streamlit.components.v1 as components
-
-TEMPLATES_JSON_PATH = "config/email_templates.json"
-
-def registrar_log(mensagem: str):
-    import logging
-    logging.info(mensagem)
+import src.config.config as config
+from src.config.config_manager import load_configs, save_configs
+from src.utils.file_utils import load_email_templates, save_email_templates
+import src.services as services
 
 def show_config_page() -> None:
     """Renderiza a página de configurações."""
     st.title("⚙️ Configurações do Sistema")
     
-    st.info("Aqui você pode ajustar a estrutura das planilhas e o mapeamento de colunas para cada tipo de relatório. Os caminhos dos arquivos são montados automaticamente.")
+    st.info("Aqui você pode ajustar a estrutura das planilhas e o mapeamento de colunas para cada tipo de relatório.")
     
     current_configs = load_configs()
 
@@ -77,13 +73,13 @@ def show_config_page() -> None:
                 st.success("✅ Configurações salvas com sucesso!")
             except Exception as e:
                 st.error(f"❌ Erro ao salvar configurações: {e}")
-                registrar_log(f"Erro ao salvar configurações: {e}")
+                logging.error(f"Erro ao salvar configurações: {e}")
 
     st.divider()
     st.subheader("🧩 Templates de E-mail")
-    st.caption("Edite os templates usados para assunto, corpo e anexos. As alterações são salvas em email_templates.json.")
+    st.caption("Edite os templates usados para assunto, corpo e anexos.")
     try:
-        templates_json = services.load_email_templates()
+        templates_json = load_email_templates()
     except Exception as e:
         st.error(f"Erro ao carregar templates: {e}")
         templates_json = {}
@@ -119,7 +115,7 @@ def show_config_page() -> None:
                         try:
                             parsed = json.loads(editable)
                             templates_json[key] = parsed
-                            services.save_email_templates(templates_json)
+                            save_email_templates(templates_json)
                             st.success("JSON salvo.")
                         except Exception as e:
                             st.error(f"JSON inválido: {e}")
@@ -149,7 +145,7 @@ def show_config_page() -> None:
                     else:
                         templates_json[key] = new_block
                     try:
-                        services.save_email_templates(templates_json)
+                        save_email_templates(templates_json)
                         st.success("Template salvo.")
                     except Exception as e:
                         st.error(f"Falha ao salvar: {e}")
