@@ -5,8 +5,7 @@
       "GFN: https://.../{ano}/{ano}{mes}/Garantia%20Financeira/GFN001/{arquivo2}.pdf",
       "SUM: https://.../{ano}/{ano}{mes}/Sum%C3%A1rio/SUM001 - Mem%C3%B3ria_de_C%C3%A1lculo/{arquivo}.pdf"
     ],
-    "body_html": "<p>Prezado(a),</p><p>Seguem anexos os relatórios GFN001 e SUM001, que apresentam a Memória de Cálculo de Garantias Financeiras, com os valores para aporte referentes à contabilização do mês de <strong>{mesext}/{ano}</strong>.</p><p>A data para realização do aporte é <strong>{dataaporte}</strong>. O saldo necessário deverá ser maior ou igual a <strong>R$ {valor}</strong>.</p><p>Observação: Quadro X - Valor da Garantia Financeira Avulsa = ((Total Necessário Preliminar - Ajuste) * 5%).</p><p>Atenciosamente,<br>{assinatura}</p>",
-    "placeholders": [
+    "body_html": "<p>Prezado(a),</p><p>Seguem anexos os relatórios GFN001 e SUM001, que apresenta a Memória de Cálculo de Garantias Financeiras, divulgados pela Câmara de Comercialização de Energia Elétrica - CCEE, com os valores para aporte de Garantias Financeiras referentes à contabilização do mês de <strong>{mesext}/{ano}</strong>.</p><p>A data para realização do aporte é <strong>{dataaporte}</strong>. Neste dia a CCEE irá verificar se o saldo na sua conta no Departamento de Ações e Custódia (DAWC) do Banco Bradesco contempla o valor do aporte.</p><p>O saldo necessário em sua conta deverá ser maior ou igual a <strong>{valor}</strong>.</p><p>Ressaltamos que os montantes de Garantias Financeiras refletem as premissas previstas na Resolução Normativa ANEEL 957/2021.</p><p>O Quadro 2 - Valor da Garantia Financeira Avulsa, do GFN001, representa o montante a ser aportado pelo agente na data mencionada, sendo sua composição: ((Total de Garantia Financeira Necessária Preliminar) - (Valor do Ajuste de Garantia Financeira)) * 5%.</p><p>Estamos à disposição para mais informações.</p><p>Atenciosamente,<br>{assinatura}</p>",    "placeholders": [
       "empresa",
       "mes",
       "ano",

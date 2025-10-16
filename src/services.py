@@ -115,7 +115,7 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
 
     if report_type in REPORT_HANDLERS:
         handler_func = REPORT_HANDLERS[report_type]
-        context = handler_func(context, row, cfg, parsed_valor=context['valor'])
+    context = handler_func(context, row, cfg, report_type=report_type, parsed_valor=context['valor'])
 
     selected_template, variant_name = resolve_variant(template_key, report_cfg, context)
     
