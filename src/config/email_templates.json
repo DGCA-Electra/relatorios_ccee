@@ -5,7 +5,7 @@
       "GFN: https://.../{ano}/{ano}{mes}/Garantia%20Financeira/GFN001/{arquivo2}.pdf",
       "SUM: https://.../{ano}/{ano}{mes}/Sum%C3%A1rio/SUM001 - Mem%C3%B3ria_de_C%C3%A1lculo/{arquivo}.pdf"
     ],
-    "body_html": "<p>Prezado(a),</p>\n\n<p>Seguem anexos os relatórios GFN001 e SUM001, que apresenta a Memória de Cálculo de Garantias Financeiras, divulgados pela Câmara de Comercialização de Energia Elétrica - CCEE, com os valores para aporte de Garantias Financeiras referentes à contabilização do mês de <strong>{mesext}/{ano}</strong>.</p>\n\n<p>A data para realização do aporte é <strong>{dataaporte}</strong>. Neste dia a CCEE irá verificar se o saldo na sua conta no Departamento de Ações e Custódia (DAWC) do Banco Bradesco contempla o valor do aporte.</p>\n\n<p>O saldo necessário em sua conta deverá ser maior ou igual a <strong>{valor}</strong>.</p>\n\n<p>Ressaltamos que os montantes de Garantias Financeiras refletem as premissas previstas na Resolução Normativa ANEEL 957/2021.</p>\n\n<p>O Quadro 2 - Valor da Garantia Financeira Avulsa, do GFN001, representa o montante a ser aportado pelo agente na data mencionada, sendo sua composição: ((Total de Garantia Financeira Necessária Preliminar) - (Valor do Ajuste de Garantia Financeira)) * 5%.</p>\n\n<p>Estamos à disposição para mais informações.</p>\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n",    "placeholders": [
+    "body_html": "<p>Prezado(a),</p>\n\n<p>Seguem anexos os relatórios GFN001 e SUM001, que apresenta a Memória de Cálculo de Garantias Financeiras, divulgados pela Câmara de Comercialização de Energia Elétrica - CCEE, com os valores para aporte de Garantias Financeiras referentes à contabilização do mês de <strong>{mesext}/{ano}</strong>.</p>\n\n<p>A data para realização do aporte é <strong>{dataaporte}</strong>. Neste dia a CCEE irá verificar se o saldo na sua conta no Departamento de Ações e Custódia (DAWC) do Banco Bradesco contempla o valor do aporte.</p>\n\n<p>O saldo necessário em sua conta deverá ser maior ou igual a <strong>{valor}</strong>.</p>\n\n<p>Ressaltamos que os montantes de Garantias Financeiras refletem as premissas previstas na Resolução Normativa ANEEL 957/2021.</p>\n\n<p>O Quadro 2 - Valor da Garantia Financeira Avulsa, do GFN001, representa o montante a ser aportado pelo agente na data mencionada, sendo sua composição: ((Total de Garantia Financeira Necessária Preliminar) - (Valor do Ajuste de Garantia Financeira)) * 5%.</p>\n\n<p>Estamos à disposição para mais informações.</p>\n\n\n\n",    "placeholders": [
       "empresa",
       "mes",
       "ano",
@@ -25,7 +25,7 @@
     "attachments": [
       "https://.../{ano}/{ano}{mes}/Sum%C3%A1rio/SUM001/{arquivo}.pdf"
     ],
-    "body_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório SUM001, referente à liquidação financeira de <strong>{mesext}/{ano}</strong>. No dia <strong>{data_liquidacao}</strong> há uma previsão de <strong>{texto1}</strong> na sua conta no DAC de <strong>{valor}</strong>.</p>\n\n<p>{texto2}</p>\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n",    "placeholders": [
+    "body_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório SUM001, referente à liquidação financeira de <strong>{mesext}/{ano}</strong>. No dia <strong>{data_liquidacao}</strong> há uma previsão de <strong>{texto1}</strong> na sua conta no DAC de <strong>{valor}</strong>.</p>\n\n<p>{texto2}</p>\n\n\n\n",    "placeholders": [
       "empresa",
       "mes",
       "ano",
@@ -60,8 +60,8 @@
   "LFN001": {
     "subject_template": "LFN001 - Resultado da Liquidação Financeira - {empresa} - {mes}/{ano}",
     "attachments": [],
-    "body_html_credit": "<p>Prezado (a),</p>\n\n<p>Segue anexo o relatório LFN001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao resultado da liquidação financeira de <strong>{mesext}/{ano}</strong>. Este relatório demonstra a redução ocorrida no crédito da liquidação financeira decorrente do rateio das inadimplências dos agentes devedores da Câmara.</p>\n\n<p>Ressaltamos que no próximo ciclo de contabilização e liquidação financeira serão incluídos no resultado do agente todo e qualquer crédito não recebido, estando o agente sujeito a um novo rateio de inadimplência, conforme Resolução ANEEL nº 552, de 14/10/2002.</p>\n\n<p>Valor a Liquidar do Agente: <strong>{ValorLiquidacao}</strong>.<br>Valor Liquidado do Agente: <strong>{ValorLiquidado}</strong>.<br>Participação do agente no rateio de inadimplências: <strong>{ValorInadimplencia}</strong>.</p>\n\n<p>Estamos à disposição para mais informações.</p>\n\n<p>Atenciosamente,</p>\n\n",
-    "body_html_debit": "<p>Prezado (a),</p>\n\n<p>Segue anexo o relatório LFN001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao resultado da liquidação financeira de <strong>{mesext}/{ano}</strong>. Este relatório demonstra o valor debitado na liquidação financeira da CCEE.</p>\n\n<p>Valor a Liquidar do Agente: <strong>{ValorLiquidacao}</strong>.<br>Valor Liquidado do Agente: <strong>{ValorLiquidado}</strong>.<br>Inadimplência: <strong>{ValorInadimplencia}</strong>.</p>\n\n<p>Estamos à disposição para mais informações.</p>\n\n<p>Atenciosamente,</p>\n\n",
+    "body_html_credit": "<p>Prezado (a),</p>\n\n<p>Segue anexo o relatório LFN001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao resultado da liquidação financeira de <strong>{mesext}/{ano}</strong>. Este relatório demonstra a redução ocorrida no crédito da liquidação financeira decorrente do rateio das inadimplências dos agentes devedores da Câmara.</p>\n\n<p>Ressaltamos que no próximo ciclo de contabilização e liquidação financeira serão incluídos no resultado do agente todo e qualquer crédito não recebido, estando o agente sujeito a um novo rateio de inadimplência, conforme Resolução ANEEL nº 552, de 14/10/2002.</p>\n\n<p>Valor a Liquidar do Agente: <strong>{ValorLiquidacao}</strong>.<br>Valor Liquidado do Agente: <strong>{ValorLiquidado}</strong>.<br>Participação do agente no rateio de inadimplências: <strong>{ValorInadimplencia}</strong>.</p>\n\n<p>Estamos à disposição para mais informações.</p>\n\n",
+    "body_html_debit": "<p>Prezado (a),</p>\n\n<p>Segue anexo o relatório LFN001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao resultado da liquidação financeira de <strong>{mesext}/{ano}</strong>. Este relatório demonstra o valor debitado na liquidação financeira da CCEE.</p>\n\n<p>Valor a Liquidar do Agente: <strong>{ValorLiquidacao}</strong>.<br>Valor Liquidado do Agente: <strong>{ValorLiquidado}</strong>.<br>Inadimplência: <strong>{ValorInadimplencia}</strong>.</p>\n\n<p>Estamos à disposição para mais informações.</p>\n\n",
     "placeholders": [
       "empresa",
       "mes",
@@ -98,7 +98,7 @@
     "attachments": [
       "https://.../{ano}/{ano}{mes}/Reserva de Capacidade/RCAP002/{arquivo}.pdf"
     ],
-      "body_html": "<p>Prezado(a),</p>\n\n\n\n<p>Segue anexo o relatório RCAP002, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao resultado da Reserva de Capacidade de <strong>{mesext}/{ano}</strong>.</p>\n\n\n\n<p>O valor do Encargo de Reserva de Capacidade - ERCAP a ser debitado da sua conta no Departamento de Ações e Custódia (DAC) do Banco Bradesco é de <strong>R$ {valor}</strong> e deverá estar disponível independentemente do valor do Aporte de Garantia Financeira.</p>\n\n\n\n<p>A data do débito será no dia <strong>{dataaporte}</strong>. Recomendamos que o valor seja disponibilizado com 1 (um) dia útil de antecedência.</p>\n\n\n\n<p>Estamos à disposição para mais informações.</p>\n\n\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n",    "placeholders": [
+      "body_html": "<p>Prezado(a),</p>\n\n\n\n<p>Segue anexo o relatório RCAP002, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao resultado da Reserva de Capacidade de <strong>{mesext}/{ano}</strong>.</p>\n\n\n\n<p>O valor do Encargo de Reserva de Capacidade - ERCAP a ser debitado da sua conta no Departamento de Ações e Custódia (DAC) do Banco Bradesco é de <strong>R$ {valor}</strong> e deverá estar disponível independentemente do valor do Aporte de Garantia Financeira.</p>\n\n\n\n<p>A data do débito será no dia <strong>{dataaporte}</strong>. Recomendamos que o valor seja disponibilizado com 1 (um) dia útil de antecedência.</p>\n\n\n\n<p>Estamos à disposição para mais informações.</p>\n\n\n\n\n\n",    "placeholders": [
       "empresa",
       "mes",
       "ano",
@@ -114,7 +114,7 @@
   "GFN - LEMBRETE": {
     "subject_template": "Atenção hoje é o dia do Aporte de Garantia Financeira à CCEE - {empresa}",
     "attachments": [],
-    "body_html": "<p>Prezado(a),</p>\n\n<p>Conforme informado anteriormente, hoje <strong>{dataaporte}</strong> é a data para o Aporte de Garantia Financeira à CCEE.</p>\n\n<p>O saldo necessário em sua conta deverá ser maior ou igual a <strong>R$ {valor}</strong>.</p>\n\n<p>A CCEE verificará o saldo na conta no DAC/Bradesco e agentes que não realizarem o aporte podem sofrer ajustes/cortes de contratos e demais penalidades.</p>\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n",
+    "body_html": "<p>Prezado(a),</p>\n\n<p>Conforme informado anteriormente, hoje <strong>{dataaporte}</strong> é a data para o Aporte de Garantia Financeira à CCEE.</p>\n\n<p>O saldo necessário em sua conta deverá ser maior ou igual a <strong>R$ {valor}</strong>.</p>\n\n<p>A CCEE verificará o saldo na conta no DAC/Bradesco e agentes que não realizarem o aporte podem sofrer ajustes/cortes de contratos e demais penalidades.</p>\n\n\n\n",
     "placeholders": [
       "empresa",
       "dataaporte",
@@ -129,7 +129,7 @@
     "attachments": [
       "https://.../{ano}/{ano}{mes}/Liquidação%20de%20Reserva%20de%20Capacidade/LFRCAP001/{arquivo}.pdf"
     ],
-    "body_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório LFRCAP001, referente ao resultado da Liquidação Financeira de Reserva de Capacidade de <strong>{mesext}/{ano}</strong>.</p>\n\n<p>O valor do Encargo de Reserva de Capacidade - ERCAP a ser debitado é de <strong>R$ {valor}</strong> e deverá estar disponível independentemente do valor do Aporte de Garantia Financeira.</p>\n\n<p>A data do débito será no dia <strong>{dataaporte}</strong>. Recomendamos disponibilizar o valor com 1 (um) dia útil de antecedência.</p>\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n",
+    "body_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório LFRCAP001, referente ao resultado da Liquidação Financeira de Reserva de Capacidade de <strong>{mesext}/{ano}</strong>.</p>\n\n<p>O valor do Encargo de Reserva de Capacidade - ERCAP a ser debitado é de <strong>R$ {valor}</strong> e deverá estar disponível independentemente do valor do Aporte de Garantia Financeira.</p>\n\n<p>A data do débito será no dia <strong>{dataaporte}</strong>. Recomendamos disponibilizar o valor com 1 (um) dia útil de antecedência.</p>\n\n\n\n",
     "placeholders": [
       "empresa",
       "mes",

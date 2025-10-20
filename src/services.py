@@ -1,9 +1,12 @@
 import pandas as pd
-from pathlib import Path
 import sys
 import pythoncom
 import re
+import base64
 import streamlit as st
+import mimetypes
+import requests
+from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from jinja2 import Environment, BaseLoader, meta
 import logging
@@ -21,6 +24,91 @@ try:
 except ImportError:
     WIN32_AVAILABLE = False
     logging.warning("win32com não disponível. Modo de simulação ativado.")
+
+# Nova função para criar rascunho via Graph API
+def create_graph_draft(access_token: str, recipient: str, subject: str, body: str, attachments: List[Path]) -> bool:
+    """Cria um rascunho de e-mail na caixa do usuário logado via MS Graph API."""
+    if not access_token:
+        st.error("Token de acesso inválido ou ausente.")
+        logging.error("Tentativa de criar rascunho sem token de acesso.")
+        return False
+
+    graph_url = "https://graph.microsoft.com/v1.0/me/messages"
+    headers = {
+        'Authorization': 'Bearer ' + access_token,
+        'Content-Type': 'application/json'
+    }
+
+    # Prepara a lista de destinatários (lidando com múltiplos e-mails separados por ';')
+    to_recipients_list = []
+    if recipient:
+        addresses = [addr.strip() for addr in recipient.split(';') if addr.strip()]
+        if addresses:
+             to_recipients_list = [{"emailAddress": {"address": addr}} for addr in addresses]
+        else:
+             logging.warning(f"Nenhum destinatário válido encontrado em: {recipient}")
+             # Decide se quer falhar ou criar rascunho sem destinatário
+             # return False # Descomente para falhar se não houver destinatário
+
+
+    email_payload = {
+        "subject": subject,
+        "importance": "Normal",
+        "body": {
+            "contentType": "HTML",
+            "content": body
+        },
+        # Só adiciona toRecipients se a lista não estiver vazia
+        **({"toRecipients": to_recipients_list} if to_recipients_list else {}),
+        "attachments": []
+    }
+
+    # Adicionar anexos
+    total_attachment_size = 0
+    MAX_ATTACHMENT_SIZE_MB = 25 # Limite comum, ajuste se necessário
+    for attachment_path in attachments:
+        if attachment_path and attachment_path.exists():
+            try:
+                file_size = attachment_path.stat().st_size
+                if total_attachment_size + file_size > MAX_ATTACHMENT_SIZE_MB * 1024 * 1024:
+                    logging.warning(f"Anexo {attachment_path.name} excede o limite de tamanho total e não será adicionado.")
+                    st.warning(f"Anexo {attachment_path.name} excede o limite de tamanho e não foi adicionado.")
+                    continue # Pula para o próximo anexo
+
+                content_bytes = attachment_path.read_bytes()
+                content_b64 = base64.b64encode(content_bytes).decode('utf-8')
+                mime_type, _ = mimetypes.guess_type(attachment_path.name)
+                email_payload["attachments"].append({
+                    "@odata.type": "#microsoft.graph.fileAttachment",
+                    "name": attachment_path.name,
+                    "contentType": mime_type or "application/octet-stream",
+                    "contentBytes": content_b64
+                })
+                total_attachment_size += file_size
+            except Exception as e:
+                logging.error(f"Erro ao processar anexo {attachment_path.name}: {e}")
+                st.warning(f"Não foi possível anexar {attachment_path.name}: {e}")
+        else:
+            logging.warning(f"Anexo não encontrado ou inválido ao preparar API: {attachment_path}")
+
+    try:
+        # Enviar request para criar o rascunho (salva na pasta Rascunhos)
+        response = requests.post(graph_url, headers=headers, json=email_payload)
+
+        if response.status_code == 201: # 201 Created significa sucesso
+            logging.info(f"Rascunho criado com sucesso para {recipient or 'sem destinatário'}")
+            return True
+        else:
+            # Log detalhado do erro da API
+            error_details = response.json().get('error', {})
+            error_message = error_details.get('message', 'Erro desconhecido da API Graph.')
+            logging.error(f"Erro ao criar rascunho via Graph API ({response.status_code}) para {recipient}: {response.text}")
+            st.error(f"Erro da API ao criar rascunho ({response.status_code}): {error_message}")
+            return False
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Erro de conexão com a API Graph ao criar rascunho: {e}")
+        st.error(f"Erro de conexão ao tentar criar rascunho: {e}")
+        return False
 
 def create_outlook_draft(recipient: str, subject: str, body: str, attachments: List[Path]) -> None:
     if not WIN32_AVAILABLE:
@@ -194,9 +282,28 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
     logging.info(f"Anexos a serem incluídos no e-mail: {attachment_names}")
 
     if auto_send:
-        result["body"] += f"<p>Atenciosamente,</p><p><strong>{common['analyst']}</strong></p>"
-        create_outlook_draft(row.get("Email", ""), result["subject"], result["body"], result["attachments"])
-    
+        access_token = st.session_state.get("ms_token", {}).get("access_token")
+        if access_token:
+            if "<p>Atenciosamente," not in result["body"]:
+                 result["body"] += f"<br><p>Atenciosamente,</p><p><strong>{common['analyst']}</strong></p>"
+
+            recipient_email = row.get("Email", "")
+
+            success = create_graph_draft(
+                access_token,
+                recipient_email,
+                result["subject"],
+                result["body"],
+                result["attachments"]
+            )
+            if not success:
+                 logging.error(f"Falha ao criar rascunho via Graph API para {row.get('Empresa')}")
+
+        else:
+            st.warning("Login necessário para enviar/criar rascunhos.")
+            logging.warning(f"Tentativa de envio sem token para {row.get('Empresa')}")
+
+
     return result
 
 def load_and_process_data(cfg: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.DataFrame]:

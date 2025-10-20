@@ -55,16 +55,33 @@ def show_main_page() -> None:
     if col1.button("📊 Visualizar Dados", use_container_width=True):
         st.session_state.preview_trigger = True
     if col2.button("📧 Enviar E-mails", use_container_width=True, type="primary"):
-        st.session_state.send_trigger = True
+        if "ms_token" not in st.session_state or not st.session_state["ms_token"].get("access_token"):
+            st.warning("Por favor, faça o login com sua conta Microsoft para enviar e-mails.")
+        else:
+            st.session_state.send_trigger = True
+            st.rerun()
 
     if st.session_state.get("send_trigger"):
-        with st.spinner("Enviando e-mails... Aguarde. Janelas do Outlook podem abrir para revisão."):
-            try:
-                results = services.process_reports(report_type=tipo, analyst=analista_final, month=mes, year=str(ano))
-                st.session_state.results = results
-                st.success(f"✅ E-mails processados e rascunhos criados no Outlook para {len(results)} empresas.")
-            except services.ReportProcessingError as e:
-                st.error(f"❌ Erro no envio: {e}")
+        access_token = st.session_state.get("ms_token", {}).get("access_token")
+        if access_token:
+            with st.spinner("Criando rascunhos na sua caixa de e-mail... Aguarde."):
+                try:
+                    results = services.process_reports(
+                        report_type=tipo,
+                        analyst=analista_final,
+                        month=mes,
+                        year=str(ano)
+                    )
+                    st.session_state.results = results
+                    st.success(f"✅ Rascunhos criados com sucesso na sua caixa de e-mail para {len(results)} empresas.")
+                except services.ReportProcessingError as e:
+                    st.error(f"❌ Erro no processamento: {e}")
+                except Exception as e:
+                     st.error(f"❌ Ocorreu um erro inesperado durante o envio: {e}")
+                     logging.exception("Erro inesperado durante process_reports:")
+        else:
+            st.error("Erro: Sua sessão expirou ou o login falhou. Por favor, faça login novamente.")
+
         st.session_state.send_trigger = False
 
     if st.session_state.get("preview_trigger"):
