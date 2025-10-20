@@ -98,8 +98,7 @@
     "attachments": [
       "https://.../{ano}/{ano}{mes}/Reserva de Capacidade/RCAP002/{arquivo}.pdf"
     ],
-    "body_html": "<p>Prezado(a),</p><p>Segue anexo o relatório RCAP002, referente ao resultado da Reserva de Capacidade de <strong>{mesext}/{ano}</strong>.</p><p>Valor do ERCAP a ser debitado: <strong>R$ {valor}</strong>. Data do débito: <strong>{dataaporte}</strong>.</p><p>Atenciosamente,<br>{assinatura}</p>",
-    "placeholders": [
+      "body_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório RCAP002, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao resultado da Reserva de Capacidade de <strong>{mesext}/{ano}</strong>.</p>\n\n<p>O valor do Encargo de Reserva de Capacidade - ERCAP a ser debitado da sua conta no Departamento de Ações e Custódia (DAC) do Banco Bradesco é de <strong>R$ {valor}</strong> e deverá estar disponível independentemente do valor do Aporte de Garantia Financeira.</p>\n\n<p>A data do débito será no dia <strong>{dataaporte}</strong>. Recomendamos que o valor seja disponibilizado com 1 (um) dia útil de antecedência.</p>\n\n<p>Estamos à disposição para mais informações.</p>\n\n<p>Atenciosamente,<br>{assinatura}</p>",    "placeholders": [
       "empresa",
       "mes",
       "ano",
