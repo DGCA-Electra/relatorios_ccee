@@ -247,7 +247,7 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> Li
         "year": year
     }
 
-    results, created_count = [], 0
+    results, created_count, error_count = [], 0, 0
     
     for idx, row in df_filtered.iterrows():
         try:
