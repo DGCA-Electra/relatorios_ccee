@@ -118,9 +118,12 @@ Após a instalação, siga estes passos para executar o RPA:
 
     ```bash
     streamlit run app.py
+    streamlit run app.py --server.sslCertFile=cert.pem --server.sslKeyFile=key.pem --server.port=8501
     ```
 
 3.  **Acesse no navegador**: A aplicação estará disponível em `http://localhost:8501`.
+
+4.  **Rodar modo fácil**: Inserir no terminal o comando `./run_secure.ps1`.
 
 --- 
 
