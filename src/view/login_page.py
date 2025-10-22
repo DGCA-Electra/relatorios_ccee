@@ -107,26 +107,34 @@ def show_login_page():
         auth_url = get_auth_url()
         if auth_url:
             st.markdown("""
-            <style>
-            .button {
-                display: inline-block;
-                padding: 0.5em 1em;
-                color: white;
-                background-color: #0078D4; /* Cor da Microsoft */
-                border: none;
-                border-radius: 4px;
-                text-align: center;
-                text-decoration: none;
-                font-size: 16px;
-                cursor: pointer;
-            }
-            .button:hover {
-                background-color: #005A9E;
-                text-decoration: none;
-                color: white;
-            }
-            </style>
-            """, unsafe_allow_html=True)
+        <style>
+        .button { /* Estilos gerais do botão (fundo, padding, etc.) */
+            display: inline-block;
+            padding: 0.5em 1em;
+            /* A cor do texto será definida na regra a.button abaixo */
+            background-color: #0078D4; /* Cor de fundo azul */
+            border: none;
+            border-radius: 4px;
+            text-align: center;
+            text-decoration: none; /* Remove sublinhado do link */
+            font-size: 16px;
+            cursor: pointer;
+            line-height: normal; /* Garante alinhamento vertical */
+        }
+        a.button { /* Estilo específico para o link QUE TEM a classe button */
+             color: white !important; /* COR PADRÃO DO TEXTO - altere para 'red' se quiser */
+             text-decoration: none !important; /* Garante que não haja sublinhado */
+        }
+        /* Não precisa mais de display: block; aqui pois o 'a' já é o botão */
+
+        a.button:hover { /* Estilo do link/botão ao passar o mouse */
+             background-color: #005A9E; /* Fundo mais escuro */
+             color: white !important; /* Cor do texto no hover (pode manter branco) */
+             text-decoration: none !important;
+        }
+        /* Removidas as regras separadas .button:hover e .button:hover a */
+        </style>
+        """, unsafe_allow_html=True)
             st.markdown(f'<a href="{auth_url}" target="_self" class="button">Entrar com Microsoft</a>', unsafe_allow_html=True)
         else:
             st.error("Não foi possível gerar o link de login. Verifique as configurações da aplicação.")
