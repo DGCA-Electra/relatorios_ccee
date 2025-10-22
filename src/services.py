@@ -1,6 +1,4 @@
 import pandas as pd
-import sys
-import pythoncom
 import re
 import base64
 import streamlit as st
@@ -18,14 +16,6 @@ from src.utils.file_utils import load_excel_data, find_attachment, load_email_te
 from src.handlers.report_handlers import REPORT_HANDLERS
 from src.utils.file_utils import ReportProcessingError
 
-try:
-    import win32com.client as win32
-    WIN32_AVAILABLE = sys.platform == "win32"
-except ImportError:
-    WIN32_AVAILABLE = False
-    logging.warning("win32com não disponível. Modo de simulação ativado.")
-
-# Nova função para criar rascunho via Graph API
 def create_graph_draft(access_token: str, recipient: str, subject: str, body: str, attachments: List[Path]) -> bool:
     """Cria um rascunho de e-mail na caixa do usuário logado via MS Graph API."""
     if not access_token:
@@ -39,16 +29,14 @@ def create_graph_draft(access_token: str, recipient: str, subject: str, body: st
         'Content-Type': 'application/json'
     }
 
-    # Prepara a lista de destinatários (lidando com múltiplos e-mails separados por ';')
     to_recipients_list = []
     if recipient:
-        addresses = [addr.strip() for addr in recipient.split(';') if addr.strip()]
+        addresses = [addr.strip() for addr in recipient.split(';') if addr.strip() and '@' in addr] # Basic check
         if addresses:
              to_recipients_list = [{"emailAddress": {"address": addr}} for addr in addresses]
         else:
              logging.warning(f"Nenhum destinatário válido encontrado em: {recipient}")
-             # Decide se quer falhar ou criar rascunho sem destinatário
-             # return False # Descomente para falhar se não houver destinatário
+             st.warning(f"Tentando criar rascunho sem destinatário válido para linha com '{recipient}'.")
 
 
     email_payload = {
@@ -58,14 +46,12 @@ def create_graph_draft(access_token: str, recipient: str, subject: str, body: st
             "contentType": "HTML",
             "content": body
         },
-        # Só adiciona toRecipients se a lista não estiver vazia
         **({"toRecipients": to_recipients_list} if to_recipients_list else {}),
         "attachments": []
     }
 
-    # Adicionar anexos
     total_attachment_size = 0
-    MAX_ATTACHMENT_SIZE_MB = 25 # Limite comum, ajuste se necessário
+    MAX_ATTACHMENT_SIZE_MB = 25
     for attachment_path in attachments:
         if attachment_path and attachment_path.exists():
             try:
@@ -73,7 +59,7 @@ def create_graph_draft(access_token: str, recipient: str, subject: str, body: st
                 if total_attachment_size + file_size > MAX_ATTACHMENT_SIZE_MB * 1024 * 1024:
                     logging.warning(f"Anexo {attachment_path.name} excede o limite de tamanho total e não será adicionado.")
                     st.warning(f"Anexo {attachment_path.name} excede o limite de tamanho e não foi adicionado.")
-                    continue # Pula para o próximo anexo
+                    continue
 
                 content_bytes = attachment_path.read_bytes()
                 content_b64 = base64.b64encode(content_bytes).decode('utf-8')
@@ -86,20 +72,18 @@ def create_graph_draft(access_token: str, recipient: str, subject: str, body: st
                 })
                 total_attachment_size += file_size
             except Exception as e:
-                logging.error(f"Erro ao processar anexo {attachment_path.name}: {e}")
-                st.warning(f"Não foi possível anexar {attachment_path.name}: {e}")
+                logging.error(f"Erro ao processar anexo {attachment_path.name}: {e}", exc_info=True)
+                st.warning(f"Não foi possível processar o anexo {attachment_path.name}: {e}")
         else:
             logging.warning(f"Anexo não encontrado ou inválido ao preparar API: {attachment_path}")
 
     try:
-        # Enviar request para criar o rascunho (salva na pasta Rascunhos)
         response = requests.post(graph_url, headers=headers, json=email_payload)
 
         if response.status_code == 201: # 201 Created significa sucesso
             logging.info(f"Rascunho criado com sucesso para {recipient or 'sem destinatário'}")
             return True
         else:
-            # Log detalhado do erro da API
             error_details = response.json().get('error', {})
             error_message = error_details.get('message', 'Erro desconhecido da API Graph.')
             logging.error(f"Erro ao criar rascunho via Graph API ({response.status_code}) para {recipient}: {response.text}")
@@ -109,32 +93,138 @@ def create_graph_draft(access_token: str, recipient: str, subject: str, body: st
         logging.error(f"Erro de conexão com a API Graph ao criar rascunho: {e}")
         st.error(f"Erro de conexão ao tentar criar rascunho: {e}")
         return False
-
-def create_outlook_draft(recipient: str, subject: str, body: str, attachments: List[Path]) -> None:
-    if not WIN32_AVAILABLE:
-        print("-- MODO DE SIMULAÇÃO ---")
-        print(f"PARA: {recipient}")
-        print(f"ASSUNTO: {subject}")
-        print(f"ANEXOS: {[p.name for p in attachments if p and p.exists()]}")
-        print("-------------------------")
-        return
-    pythoncom.CoInitialize()
-    try:
-        outlook = win32.Dispatch("Outlook.Application")
-        mail = outlook.CreateItem(0)
-        mail.To = recipient
-        mail.Subject = subject
-        mail.HTMLBody = body
-        for attachment_path in attachments:
-            if attachment_path and attachment_path.exists():
-                mail.Attachments.Add(str(attachment_path.resolve()))
-            else:
-                logging.warning(f"Anexo não encontrado: {attachment_path}")
-        mail.Display(True)
     except Exception as e:
-        raise ReportProcessingError(f"Falha ao interagir com o Outlook: {e}")
-    finally:
-        pythoncom.CoUninitialize()
+        logging.error(f"Erro inesperado em create_graph_draft: {e}", exc_info=True)
+        st.error(f"Erro inesperado ao criar rascunho: {e}")
+        return False
+
+def render_email_from_template(report_type: str, row: Dict[str, Any], common: Dict[str, Any], cfg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    templates = load_email_templates()
+    template_key = "LFRES" if report_type.startswith("LFRES") else report_type
+    report_cfg = templates.get(template_key)
+    if not report_cfg:
+        raise ReportProcessingError(f"Template para '{template_key}' não encontrado.")
+
+    context = {**row, **common, **cfg}
+    context.update({
+        "empresa": row.get("Empresa"),
+        "mesext": common.get("month_long"),
+        "mes": common.get("month_num"),
+        "ano": common.get("year"),
+        "data": row.get("Data"),
+        "assinatura": common.get("analyst"),
+        "valor": parse_brazilian_number(row.get("Valor", 0))
+    })
+    logging.info(f"Processando {context.get('empresa', 'N/A')} - Tipo: {report_type} - Valor original: '{row.get('Valor', 0)}' -> Parseado: {context.get('valor', 'N/A')}")
+
+    if report_type in REPORT_HANDLERS:
+        handler_func = REPORT_HANDLERS[report_type]
+        try:
+            context = handler_func(context, row, cfg, report_type=report_type, parsed_valor=context.get('valor'))
+        except Exception as e:
+             logging.error(f"Erro no handler {report_type} para {context.get('empresa')}: {e}", exc_info=True)
+             st.warning(f"Erro ao preparar dados específicos ({report_type}) para {context.get('empresa')}: {e}")
+
+
+    selected_template, variant_name = resolve_variant(template_key, report_cfg, context)
+    logging.info(f"Variante selecionada para {context.get('empresa')}: {variant_name}")
+
+    if variant_name == "SKIP":
+        logging.info(f"Pulando {context.get('empresa')} (lógica da variante SKIP)")
+        return None
+
+    for key in ["valor", "ValorLiquidacao", "ValorLiquidado", "ValorInadimplencia"]:
+        if key in context and context[key] is not None:
+            try:
+                 if not isinstance(context[key], str) or "R$" not in context[key]:
+                      context[key] = format_currency(context[key])
+            except Exception:
+                 logging.warning(f"Não foi possível formatar '{key}' como moeda para {context.get('empresa')}.")
+                 context[key] = str(context[key])
+
+    date_keys = ["data", "dataaporte", "data_liquidacao"]
+    for key in date_keys:
+        if key in context and context.get(key) is not None:
+             context[key] = format_date(context[key])
+
+    attachments = []
+    filename = build_filename(str(row.get("Empresa","Desconhecida")), report_type, common.get("month_long", "").upper(), str(common.get("year","")))
+    if cfg.get("pdfs_dir"):
+        try:
+            path = find_attachment(cfg["pdfs_dir"], filename)
+            if path:
+                attachments.append(path)
+                logging.info(f"Anexo principal encontrado para {context.get('empresa')}: {filename}")
+        except Exception as e:
+            logging.error(f"Erro ao procurar anexo principal para {context.get('empresa')}: {e}")
+    if report_type == "GFN001":
+        try:
+            filename_sum = build_filename(str(row.get("Empresa","Desconhecida")), "SUM001", common.get("month_long", "").upper(), str(common.get("year","")))
+            base_dir = Path(cfg.get("pdfs_dir", ""))
+            if base_dir.parent and base_dir.parent.parent:
+                memoria_calc_dir = base_dir.parent.parent / "Sumário" / "SUM001 - Memória_de_Cálculo"
+                sum_path = find_attachment(str(memoria_calc_dir), filename_sum)
+                if sum_path:
+                    attachments.append(sum_path)
+                    logging.info(f"Anexo SUM001 encontrado para {context.get('empresa')}: {filename_sum}")
+            else:
+                 logging.warning(f"Não foi possível determinar o diretório pai para buscar o anexo SUM001 (base_dir: {cfg.get('pdfs_dir')}).")
+        except Exception as e:
+            logging.error(f"Erro ao procurar anexo SUM001 para {context.get('empresa')}: {e}")
+
+
+    subject_tpl = selected_template.get("subject_template", f"{report_type} - {context.get('empresa')}") # Default mais seguro
+    body_tpl = selected_template.get("body_html", "")
+
+    if report_type == "LFN001":
+        situacao_lfn = str(row.get("Situacao","")).strip()
+        if situacao_lfn == "Crédito":
+            body_tpl = selected_template.get("body_html_credit", body_tpl)
+        elif situacao_lfn == "Débito":
+            body_tpl = selected_template.get("body_html_debit", body_tpl)
+
+    logging.debug(f"Contexto final para renderização ({context.get('empresa')}): {context}")
+
+    env = Environment(loader=BaseLoader())
+    def normalize(s: str):
+        return re.sub(r"\{(\w+)\}", r"{{ \1 }}", s) if isinstance(s, str) else s
+
+    missing_placeholders = []
+    try:
+        parsed_body = env.parse(normalize(body_tpl))
+        undeclared_vars = meta.find_undeclared_variables(parsed_body)
+        missing_placeholders = list(undeclared_vars)
+        for k in undeclared_vars:
+            if k not in context:
+                context[k] = f"[{k} N/D]"
+                logging.warning(f"Placeholder '{k}' não encontrado no contexto para {context.get('empresa')}.")
+    except Exception as e:
+        logging.error(f"Erro ao analisar template Jinja2 para {context.get('empresa')}: {e}")
+
+        body_tpl = f"<p>Erro ao processar o template do e-mail: {e}</p>"
+
+    try:
+        subject = env.from_string(normalize(subject_tpl)).render(context)
+        body = env.from_string(normalize(body_tpl)).render(context)
+    except Exception as e:
+        logging.error(f"Erro ao renderizar template Jinja2 para {context.get('empresa')}: {e}", exc_info=True)
+        subject = f"ERRO NO TEMPLATE - {report_type} - {context.get('empresa')}"
+        body = f"<p>Ocorreu um erro ao gerar o corpo deste e-mail a partir do template.</p><p>Erro: {e}</p>"
+
+    assinatura_html = f"<br><p>Atenciosamente,</p><p><strong>{common.get('analyst', 'Equipe DGCA')}</strong></p>"
+    if "<p>Atenciosamente," not in body:
+         body += assinatura_html
+
+
+    result = {
+        "subject": sanitize_subject(subject),
+        "body": sanitize_html(body),
+        "attachments": attachments,
+        "missing_placeholders": missing_placeholders,
+        "attachment_warnings": []
+    }
+
+    return result
 
 def build_filename(company: str, report_type: str, month: str, year: str) -> str:
     company_clean = str(company).strip()
@@ -182,130 +272,6 @@ def resolve_variant(report_type: str, report_config: Dict[str, Any], context: Di
     first_key = next(iter(variants), "Padrao")
     return variants.get(first_key, report_config), first_key
 
-def render_email_from_template(report_type: str, row: Dict[str, Any], common: Dict[str, Any], cfg: Dict[str, Any], auto_send: bool = False) -> Optional[Dict[str, Any]]:
-    templates = load_email_templates()
-    template_key = "LFRES" if report_type.startswith("LFRES") else report_type
-    report_cfg = templates.get(template_key)
-    if not report_cfg:
-        raise ReportProcessingError(f"Template para '{template_key}' não encontrado.")
-
-    context = {**row, **common, **cfg}
-    context.update({
-        "empresa": row.get("Empresa"),
-        "mesext": common.get("month_long"),
-        "mes": common.get("month_num"),
-        "ano": common.get("year"),
-        "data": row.get("Data"),
-        "assinatura": common.get("analyst"),
-        "valor": parse_brazilian_number(row.get("Valor", 0))
-    })
-    logging.info(f"Processando {context['empresa']} - Tipo: {report_type} - Valor original: '{row.get('Valor', 0)}' -> Parseado: {context['valor']}")
-
-    if report_type in REPORT_HANDLERS:
-        handler_func = REPORT_HANDLERS[report_type]
-    context = handler_func(context, row, cfg, report_type=report_type, parsed_valor=context['valor'])
-
-    selected_template, variant_name = resolve_variant(template_key, report_cfg, context)
-    
-    logging.info(f"Variante selecionada: {variant_name}")
-    
-    if variant_name == "SKIP":
-        logging.info(f"Pulando {context.get('empresa')} (Gerador-EER com valor zero)")
-        return None
-
-    for key in ["valor", "ValorLiquidacao", "ValorLiquidado", "ValorInadimplencia"]:
-        if key in context and context[key] is not None:
-            context[key] = format_currency(context[key])
-    
-    if "data" in context and context["data"] is not None:
-        context["data"] = format_date(context["data"])
-    
-    for key in ["data", "dataaporte", "data_liquidacao"]:
-        if key in context and context.get(key) is not None:
-            context[key] = format_date(context[key])
-
-    attachments = []
-    filename = build_filename(str(row.get("Empresa","")), report_type, common["month_long"].upper(), str(common.get("year","")))
-    if cfg.get("pdfs_dir"):
-        path = find_attachment(cfg["pdfs_dir"], filename)
-        if path: 
-            attachments.append(path)
-            logging.info(f"Anexo encontrado: {filename}")
-        else:
-            logging.warning(f"Anexo não encontrado: {filename}")
-
-    if report_type == "GFN001":
-        filename_sum = build_filename(str(row.get("Empresa","")), "SUM001", common["month_long"].upper(), str(common.get("year","")))
-        base_dir = Path(cfg.get("pdfs_dir", ""))
-        memoria_calc_dir = base_dir.parent.parent / "Sumário" / "SUM001 - Memória_de_Cálculo"
-        sum_path = find_attachment(str(memoria_calc_dir), filename_sum)
-        if sum_path: 
-            attachments.append(sum_path)
-            logging.info(f"Anexo SUM001 encontrado: {filename_sum}")
-
-    subject_tpl = selected_template.get("subject_template", "")
-    body_tpl = selected_template.get("body_html", "")
-
-    if report_type == "LFN001":
-        situacao_lfn = str(row.get("Situacao","")).strip()
-        if situacao_lfn == "Crédito":
-            body_tpl = selected_template.get("body_html_credit", body_tpl)
-        else:
-            body_tpl = selected_template.get("body_html_debit", body_tpl)
-
-    logging.info(f"Contexto final para renderização: {context}")
-
-    env = Environment(loader=BaseLoader())
-    def normalize(s: str): 
-        """Normaliza placeholders {var} para {{ var }}"""
-        return re.sub(r"\{(\w+)\}", r"{{ \1 }}", s) if isinstance(s, str) else s
-    
-    parsed_body = env.parse(normalize(body_tpl))
-    undeclared_vars = meta.find_undeclared_variables(parsed_body)
-    for k in undeclared_vars: 
-        if k not in context:
-            context[k] = f"[{k} N/D]"
-            logging.warning(f"Placeholder não encontrado: {k}")
-
-    subject = env.from_string(normalize(subject_tpl)).render(context)
-    body = env.from_string(normalize(body_tpl)).render(context)
-    
-    result = {
-        "subject": sanitize_subject(subject), 
-        "body": sanitize_html(body), 
-        "attachments": attachments,
-        "missing_placeholders": list(undeclared_vars),
-        "attachment_warnings": []
-    }
-
-    attachment_names = [p.name for p in attachments]
-    logging.info(f"Anexos a serem incluídos no e-mail: {attachment_names}")
-
-    if auto_send:
-        access_token = st.session_state.get("ms_token", {}).get("access_token")
-        if access_token:
-            if "<p>Atenciosamente," not in result["body"]:
-                 result["body"] += f"<br><p>Atenciosamente,</p><p><strong>{common['analyst']}</strong></p>"
-
-            recipient_email = row.get("Email", "")
-
-            success = create_graph_draft(
-                access_token,
-                recipient_email,
-                result["subject"],
-                result["body"],
-                result["attachments"]
-            )
-            if not success:
-                 logging.error(f"Falha ao criar rascunho via Graph API para {row.get('Empresa')}")
-
-        else:
-            st.warning("Login necessário para enviar/criar rascunhos.")
-            logging.warning(f"Tentativa de envio sem token para {row.get('Empresa')}")
-
-
-    return result
-
 def load_and_process_data(cfg: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.DataFrame]:
     header = int(cfg.get("header_row", 0))
 
@@ -326,76 +292,138 @@ def load_and_process_data(cfg: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.DataFra
     
     return df_dados, df_contatos
 
-def process_reports(report_type: str, analyst: str, month: str, year: str) -> List[Dict[str, Any]]:    
+def process_reports(report_type: str, analyst: str, month: str, year: str) -> List[Dict[str, Any]]:
+    """
+    Processa relatórios, renderiza e-mails e tenta criar rascunhos via API Graph.
+
+    Returns:
+        Lista de dicionários, um para cada e-mail *efetivamente* criado com sucesso pela API.
+    """
     all_configs = load_configs()
     cfg = all_configs.get(report_type)
     if not cfg:
+        logging.error(f"Configuração para '{report_type}' não encontrada ao iniciar process_reports.")
         raise ReportProcessingError(f"Configuração para '{report_type}' não encontrada.")
-    
+
     logging.info(f"Iniciando processamento para Relatório: {report_type}, Analista: {analyst}, Mês/Ano: {month}/{year}")
 
-    cfg.update(build_report_paths(report_type, year, month))
-    
-    df_dados, df_contatos = load_and_process_data(cfg)
-    
+    try:
+        cfg.update(build_report_paths(report_type, year, month))
+        df_dados, df_contatos = load_and_process_data(cfg)
+    except FileNotFoundError as e:
+         logging.error(f"Erro ao carregar arquivos base (Excel): {e}", exc_info=True)
+         raise ReportProcessingError(f"Erro ao carregar arquivos de dados/contato: {e}")
+    except Exception as e:
+         logging.error(f"Erro inesperado ao carregar/processar dados iniciais: {e}", exc_info=True)
+         raise ReportProcessingError(f"Erro inesperado ao carregar dados: {e}")
+
+
     df_merged = pd.merge(df_dados, df_contatos, on="Empresa", how="left")
+    if "Analista" not in df_merged.columns:
+        logging.error("Coluna 'Analista' não encontrada no DataFrame mesclado. Verifique mapeamentos e planilha de contatos.")
+        raise ReportProcessingError("Coluna 'Analista' ausente nos dados. Verifique a configuração e a planilha de contatos.")
+
     df_filtered = df_merged[df_merged["Analista"] == analyst].copy()
-    
-    if df_filtered.empty: 
-        logging.warning(f"Nenhum dado encontrado para analista '{analyst}'")
+
+    if df_filtered.empty:
+        logging.warning(f"Nenhum dado encontrado para o analista '{analyst}' após filtro.")
         return []
 
-    df_filtered["Email"] = df_filtered["Email"].fillna("EMAIL_NAO_ENCONTRADO")
+    missing_email_mask = df_filtered["Email"].isna() | (df_filtered["Email"].str.strip() == "")
+    if missing_email_mask.any():
+        missing_companies = df_filtered.loc[missing_email_mask, "Empresa"].tolist()
+        logging.warning(f"E-mail não encontrado para as seguintes empresas: {', '.join(missing_companies)}")
+        df_filtered.loc[missing_email_mask, "Email"] = "EMAIL_NAO_ENCONTRADO"
 
     common_data = {
         "analyst": analyst,
         "month_long": month.title(),
-        "month_num": {m: f"{i+1:02d}" for i, m in enumerate(MESES)}.get(month.upper()),
+        "month_num": {m.upper(): f"{i+1:02d}" for i, m in enumerate(MESES)}.get(month.upper(), "??"),
         "year": year
     }
 
-    results, created_count, error_count = [], 0, 0
-    
+    results_success = []
+    created_count = 0
+    render_errors = 0
+    api_errors = 0
+    skipped_count = 0
+
+    access_token = st.session_state.get("ms_token", {}).get("access_token")
+    if not access_token:
+        st.error("Erro: Usuário não autenticado ou sessão expirada. Não é possível criar rascunhos.")
+        logging.error("Tentativa de processar relatórios sem token de acesso válido na sessão.")
+        return []
+
     for idx, row in df_filtered.iterrows():
         try:
-            logging.info(f"\n{'='*60}")
-            logging.info(f"Processando linha {idx+1}/{len(df_filtered)}: {row.get('Empresa', 'N/A')}")
-            
+            logging.info(f"--- Processando Linha {idx+1}/{len(df_filtered)}: {row.get('Empresa', 'N/A')} ---")
+
             email_data = render_email_from_template(
-                report_type, 
-                row.to_dict(), 
-                common_data, 
-                cfg, 
-                auto_send=True
+                report_type,
+                row.to_dict(),
+                common_data,
+                cfg
             )
-            
-            if email_data:
+
+            if email_data is None:
+                skipped_count += 1
+                logging.info(f"E-mail pulado (lógica interna, ex: variante SKIP) para {row.get('Empresa')}")
+                continue
+
+            recipient_email = row.get("Email", "")
+            valid_recipients = [addr.strip() for addr in recipient_email.split(';') if addr.strip() and '@' in addr]
+            if not valid_recipients:
+                 logging.warning(f"Nenhum destinatário válido para {row.get('Empresa')} ('{recipient_email}'). Pulando chamada da API.")
+                 st.warning(f"E-mail para {row.get('Empresa')} não pôde ser criado (sem destinatário válido).")
+                 api_errors += 1
+                 continue
+
+
+            success = create_graph_draft(
+                access_token,
+                recipient_email,
+                email_data["subject"],
+                email_data["body"],
+                email_data["attachments"]
+            )
+
+            if success:
                 created_count += 1
-                results.append({
-                    "empresa": row["Empresa"],
-                    "data": row.get("Data", "N/A"),
+                results_success.append({
+                    "empresa": row.get("Empresa", "N/A"),
+                    "data": format_date(row.get("Data")),
                     "valor": format_currency(row.get("Valor", 0)),
-                    "email": row["Email"], 
-                    "anexos_count": len(email_data.get("attachments", [])), 
+                    "email": recipient_email,
+                    "anexos_count": len(email_data.get("attachments", [])),
                     "created_count": created_count
                 })
-                logging.info(f"E-mail criado com sucesso para {row['Empresa']}")
             else:
-                logging.info(f"E-mail pulado para {row['Empresa']}")
-                
+                api_errors += 1
+                logging.error(f"Falha na chamada da API Graph para criar rascunho para {row.get('Empresa')}")
+
+        except ReportProcessingError as rpe:
+             render_errors += 1
+             logging.error(f"Erro de processamento (ReportProcessingError) para {row.get('Empresa', 'Empresa desconhecida')}: {rpe}", exc_info=True)
+             st.warning(f"Erro ao processar {row.get('Empresa', 'Empresa desconhecida')}: {rpe}")
+             continue
         except Exception as e:
-            error_count += 1 
-            logging.error(f"Erro ao processar linha para {row.get('Empresa', 'Empresa desconhecida')}: {e}")
+            render_errors += 1
+            logging.error(f"Erro GERAL inesperado ao processar linha para {row.get('Empresa', 'Empresa desconhecida')}: {e}", exc_info=True)
+            st.error(f"Erro inesperado ao processar {row.get('Empresa', 'Empresa desconhecida')}: {e}")
             continue
-    
-    final_message = f"Processamento concluído: {created_count} e-mails criados de {len(df_filtered)} empresas."
-    if error_count > 0:
-        final_message += f" {error_count} empresas falharam."
-    
+
+    total_processed = len(df_filtered)
+    final_message = f"Processamento concluído: {created_count} de {total_processed} rascunhos criados com sucesso."
+    if skipped_count > 0:
+        final_message += f" {skipped_count} e-mails foram pulados intencionalmente."
+    if render_errors > 0:
+        final_message += f" {render_errors} falharam durante a preparação/renderização."
+    if api_errors > 0:
+        final_message += f" {api_errors} falharam durante a criação via API (verifique logs/mensagens de erro acima)."
+
     logging.info(final_message)
     logging.info(f"{'='*60}\n")
-            
-    return results
+    return results_success
 
 @st.cache_data(show_spinner=False)
 def preview_dados(report_type: str, analyst: str, month: str, year: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:

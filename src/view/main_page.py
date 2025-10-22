@@ -129,7 +129,7 @@ def show_main_page() -> None:
                     'analyst': analista_final,
                 }
                 try:
-                    rendered = services.render_email_from_template(tipo, dados_empresa, common, cfg, auto_send=False)
+                    rendered = services.render_email_from_template(tipo, dados_empresa, common, cfg)
                     with st.expander(f"Prévia #{idx+1} - {dados_empresa.get('Empresa','')}", expanded=False):
                         render_email_preview(rendered['subject'], rendered['body'])
                 except Exception as e:
