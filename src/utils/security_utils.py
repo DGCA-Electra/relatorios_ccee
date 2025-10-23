@@ -23,7 +23,7 @@ ALLOWED_TAGS = list(bleach.sanitizer.ALLOWED_TAGS) + [
 ]
 ALLOWED_ATTRS = {
     "a": ["href", "title", "target", "rel"],
-    "*": ["style"],
+    #"*": ["style"],
 }
 
 
@@ -36,7 +36,6 @@ def sanitize_html(html: str) -> str:
 def sanitize_subject(subject: str) -> str:
     if not isinstance(subject, str):
         return ""
-    # remove quebras de linha para evitar Email Header Injection
     return re.sub(r"[\r\n]", " ", subject).strip()
 
 
