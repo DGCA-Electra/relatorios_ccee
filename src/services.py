@@ -240,6 +240,21 @@ def resolve_variant(report_type: str, report_config: Dict[str, Any], context: Di
 
     variants = report_config["variants"]
 
+    # Lógica específica para SUM001
+    if report_type == "SUM001":
+        logic = report_config.get("logic", {})
+        if logic and "variant_selector" in logic and "conditions" in logic:
+            selector_value = str(context.get(logic["variant_selector"], "")).strip()
+            logging.info(f"SUM001 Seletor valor={selector_value}, contexto={context}")
+            variant_name = logic["conditions"].get(selector_value, logic["conditions"].get("default", "padrao"))
+            variant = variants.get(variant_name, {})
+            if not variant:
+                logging.warning(f"Variante {variant_name} não encontrada para {selector_value}, usando padrão")
+                variant = variants.get("padrao", {})
+            logging.info(f"SUM001 Variante selecionada para {context.get('empresa')}: {variant_name} (selector={selector_value})")
+            return variant, variant_name
+
+    # Lógica específica para LFRES
     if report_type.startswith("LFRES"):
         raw_val = context.get("valor", 0.0)
         try:

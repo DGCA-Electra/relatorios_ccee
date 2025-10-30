@@ -25,35 +25,35 @@
     "attachments": [
       "https://.../{ano}/{ano}{mes}/Sum%C3%A1rio/SUM001/{arquivo}.pdf"
     ],
-    "body_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório SUM001, referente à liquidação financeira de <strong>{mesext}/{ano}</strong>. No dia <strong>{data_liquidacao}</strong> há uma previsão de <strong>{texto1}</strong> na sua conta no DAC de <strong>{valor}</strong>.</p>\n\n<p>{texto2}</p>\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n",    "placeholders": [
+    "variants": {
+      "credito": {
+        "body_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório SUM001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente a liquidação financeira de <strong>{mesext}/{ano}</strong>. No dia <strong>{data_liquidacao}</strong> há uma previsão de <strong>crédito</strong> na sua conta no Departamento de Ações e Custódia (DAC) do Banco Bradesco de <strong>{valor}</strong>.</p>\n\n<p>Sendo assim, ressaltamos que esse crédito está sujeito ao rateio da eventual inadimplência observada no processo de liquidação financeira da Câmara. Dessa forma, caso o valor não seja creditado na íntegra, o mesmo será incluído no próximo ciclo de contabilização e liquidação financeira, estando o agente sujeito a um novo rateio de inadimplência, conforme Resolução ANEEL nº 552, de 14/10/2002.</p>\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n"
+      },
+      "debito": {
+        "body_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório SUM001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente a liquidação financeira de <strong>{mesext}/{ano}</strong>. No dia <strong>{data_liquidacao}</strong> há uma previsão de <strong>débito</strong> na sua conta no Departamento de Ações e Custódia (DAC) do Banco Bradesco de <strong>{valor}</strong>.</p>\n\n<p>Sendo assim, teoricamente a conta possui o saldo necessário, visto que o aporte financeiro foi solicitado anteriormente. No entanto, a fim de evitar qualquer penalidade junto à CCEE, orientamos a verificação do saldo e também que o aporte de qualquer diferença seja efetuado com 1 (um) dia útil de antecedência da data da liquidação financeira.</p>\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n"
+      },
+      "padrao": {
+        "body_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório SUM001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente a liquidação financeira de <strong>{mesext}/{ano}</strong>.</p>\n\n<p>Por favor, verifique os dados na planilha.</p>\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n"
+      }
+    },
+    "placeholders": [
       "empresa",
       "mes",
       "ano",
       "mesext",
-      "dataaporte",
+      "data_liquidacao",
       "valor",
       "arquivo",
-      "texto1",
-      "texto2",
       "assinatura"
     ],
-    "logic": [
-      {
-        "if": "valor > 0",
-        "set": {
-          "texto1": "crédito",
-          "dataaporte": "dataaporte + 1",
-          "texto2": "crédito sujeito ao rateio de inadimplência (texto padrão ANEEL 552/2002)."
-        }
-      },
-      {
-        "else": "valor < 0",
-        "set": {
-          "texto1": "débito",
-          "texto2": "orientar verificação do saldo e aporte com 1 dia útil de antecedência."
-        }
+    "logic": {
+      "variant_selector": "situacao",
+      "conditions": {
+        "Crédito": "credito",
+        "Débito": "debito",
+        "default": "padrao"
       }
-    ],
+    },
     "send_mode": "display (rascunho).",
     "source": "VBA-SUM"
   },

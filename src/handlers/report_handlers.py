@@ -44,19 +44,14 @@ def prepare_sum001_context(context, row, cfg, report_type, parsed_valor, **kwarg
             data_debito, data_credito = df_raw_sum.iloc[23, 0], df_raw_sum.iloc[23, 1]
         except Exception:
             data_debito, data_credito = None, None
-        
+
         situacao = str(row.get("Situacao", "")).strip()
-        if situacao == "Crédito":
-            context["texto1"] = "crédito"
-            context["texto2"] = "Ressaltamos que esse crédito está sujeito ao rateio de inadimplência dos agentes devedores da Câmara, conforme Resolução ANEEL nº 552, de 14/10/2002."
-            context["data_liquidacao"] = data_credito
-        elif situacao == "Débito":
-            context["texto1"] = "débito"
-            context["texto2"] = "Teoricamente a conta possui o saldo necessário, mas recomendamos verificar e disponibilizar o valor com 1 (um) dia útil de antecedência."
-            context["data_liquidacao"] = data_debito
-        else:
-            context["texto1"], context["texto2"] = "transação", "verifique os dados na planilha."
-        context["valor"] = abs(parsed_valor)
+        # Define a situação para selecionar a variante do template
+        context["situacao"] = situacao
+        # Define a data com base na situação
+        context["data_liquidacao"] = data_credito if situacao == "Crédito" else data_debito
+        # Para débito, garante valor negativo; para crédito, valor positivo
+        context["valor"] = abs(parsed_valor) if situacao == "Crédito" else -abs(parsed_valor)
 
     if report_type in ["LFRCAP001", "RCAP002"]:
 
