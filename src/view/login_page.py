@@ -72,7 +72,7 @@ def get_user_info(access_token):
 def show_login_page():
     """Renderiza a página de login e processa o callback."""
 
-    st.image("static/logo.png", width=250)
+    # st.image("static/logo.png", width=250)
     st.title("Login - Envio de Relatórios CCEE")
     st.write("Por favor, autentique-se com sua conta Microsoft para continuar.")
 
