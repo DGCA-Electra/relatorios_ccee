@@ -3,15 +3,17 @@ from pathlib import Path
 from typing import Dict, Any
 from src.config.config import DEFAULT_CONFIGS, PATH_CONFIGS, CONFIG_FILE
 
-def get_user_paths() -> Dict[str, str]:
+def get_user_paths(username: str = None) -> Dict[str, str]:
     """
     Gera os caminhos padrão para o sistema.
-    
-    Returns:
-        Dicionário com os caminhos configurados
+    Se 'username' for passado, usa ele. Caso contrário, pega do sistema.
     """
     import os
-    current_user = os.getenv('USERNAME', 'malik.mourad')
+    if not username:
+        current_user = os.getenv('USERNAME', 'malik.mourad')
+    else:
+        current_user = username
+
     user_base = f"{PATH_CONFIGS['user_base']}/{current_user}"
     
     return {
@@ -19,17 +21,10 @@ def get_user_paths() -> Dict[str, str]:
         "contratos_email_path": f"{user_base}/{PATH_CONFIGS['contatos_email']}"
     }
 
-def build_report_paths(report_type: str, ano: str, mes: str) -> Dict[str, str]:
+def build_report_paths(report_type: str, ano: str, mes: str, username: str = None) -> Dict[str, str]:
     """
     Constrói os caminhos específicos para um relatório.
-    
-    Args:
-        report_type: Tipo do relatório (ex: GFN001)
-        ano: Ano do relatório (ex: 2025)
-        mes: Mês do relatório (ex: JUNHO)
-        
-    Returns:
-        Dicionário com os caminhos do relatório
+    Agora aceita 'username' opcional para montar o caminho dinâmico.
     """
     if report_type not in DEFAULT_CONFIGS:
         raise ValueError(f"Tipo de relatório '{report_type}' não reconhecido")
@@ -44,8 +39,8 @@ def build_report_paths(report_type: str, ano: str, mes: str) -> Dict[str, str]:
     ano_mes = f"{ano}{mes_num}"
     mes_abrev = mes.lower()[:3]
     ano_2dig = ano[-2:]
-    
-    user_paths = get_user_paths()
+
+    user_paths = get_user_paths(username)
     
     path_template = DEFAULT_CONFIGS[report_type].get("path_template", {})
     

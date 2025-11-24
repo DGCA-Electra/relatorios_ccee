@@ -38,7 +38,7 @@ def main() -> None:
     if "ms_token" not in st.session_state:
         show_login_page()
     else:
-        # st.image("static/logo.png", width=250)
+        st.image("static/logo.png", width=250)
 
         user_info = st.session_state.get("user_info", {})
         user_name = user_info.get("displayName", "Usuário")
@@ -58,7 +58,6 @@ def main() -> None:
         elif page == "Configurações":
             show_config_page()
 
-        st.sidebar.info("Aplicação desenvolvida para automação de envio de e-mails DGCA.")
         st.sidebar.warning("Nota: Os e-mails serão criados como rascunhos na sua caixa de entrada.")
         st.sidebar.markdown("---")
         st.sidebar.markdown("© 2025 Desenvolvido por Malik Ribeiro")

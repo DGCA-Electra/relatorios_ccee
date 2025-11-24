@@ -320,18 +320,42 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> Li
         logging.error(f"Configuração para '{report_type}' não encontrada ao iniciar process_reports.")
         raise ReportProcessingError(f"Configuração para '{report_type}' não encontrada.")
 
+    user_info = st.session_state.get("user_info", {})
+    email_usuario = user_info.get("userPrincipalName", "")
+    username_rede = None
+    
+    if email_usuario and "@" in email_usuario:
+        username_rede = email_usuario.split("@")[0]
+        logging.info(f"Usando caminho de rede para o usuário: {username_rede}")
+    else:
+        logging.warning("Usuário não logado ou e-mail inválido. Usando usuário do sistema (fallback).")
+        
     logging.info(f"Iniciando processamento para Relatório: {report_type}, Analista: {analyst}, Mês/Ano: {month}/{year}")
 
     try:
-        cfg.update(build_report_paths(report_type, year, month))
+        paths = build_report_paths(report_type, year, month, username=username_rede)
+        cfg.update(paths)
         df_dados, df_contatos = load_and_process_data(cfg)
+        
     except FileNotFoundError as e:
-         logging.error(f"Erro ao carregar arquivos base (Excel): {e}", exc_info=True)
-         raise ReportProcessingError(f"Erro ao carregar arquivos de dados/contato: {e}")
+        if username_rede:
+            logging.warning(f"Pasta do usuário '{username_rede}' não encontrada. Tentando fallback para usuário local...")
+            try:
+                paths = build_report_paths(report_type, year, month, username=None)
+                cfg.update(paths)
+                df_dados, df_contatos = load_and_process_data(cfg)
+                logging.info(f"Sucesso no fallback: Dados carregados usando caminho local.")
+            
+            except FileNotFoundError as e2:
+                logging.error(f"Erro fatal: Arquivos não encontrados nem para '{username_rede}' nem localmente. {e2}")
+                raise ReportProcessingError(f"Arquivos não encontrados. Verifique se o caminho existe para o usuário logado ou local.")
+        else:
+            logging.error(f"Erro ao carregar arquivos base (Excel): {e}", exc_info=True)
+            raise ReportProcessingError(f"Erro ao carregar arquivos de dados/contato: {e}")
+            
     except Exception as e:
          logging.error(f"Erro inesperado ao carregar/processar dados iniciais: {e}", exc_info=True)
          raise ReportProcessingError(f"Erro inesperado ao carregar dados: {e}")
-
 
     df_merged = pd.merge(df_dados, df_contatos, on="Empresa", how="left")
     if "Analista" not in df_merged.columns:
@@ -459,7 +483,15 @@ def preview_dados(report_type: str, analyst: str, month: str, year: str) -> Tupl
     if not cfg:
         raise ReportProcessingError(f"'{report_type}' não encontrado nas configurações.")
 
-    report_paths = build_report_paths(report_type, year, month)
+    username_rede = None
+    try:
+        user_info = st.session_state.get("user_info", {})
+        email_usuario = user_info.get("userPrincipalName", "")
+        if email_usuario and "@" in email_usuario:
+            username_rede = email_usuario.split("@")[0]
+    except Exception:
+        pass
+    report_paths = build_report_paths(report_type, year, month, username=username_rede)
     cfg.update(report_paths)
     
     df_dados, df_contatos = load_and_process_data(cfg)
