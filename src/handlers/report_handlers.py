@@ -80,6 +80,35 @@ def prepare_lfrcap_context(context, row, cfg, report_type, **kwargs):
          context["dataaporte"] = row.get("Data")
     return context
 
+def generic_report_handler(context, row, cfg, report_type, **kwargs):
+    """
+    Handler universal que processa extrações baseadas puramente no JSON de configuração.
+    Permite definir: 'extra_fields': [{'name': 'data_venc', 'row': 23, 'col': 1}]
+    """
+    extra_fields = cfg.get("extra_fields", [])
+    
+    if extra_fields:
+        try:
+            df_raw = load_excel_data(cfg["excel_dados"], cfg["sheet_dados"], -1)
+            
+            for field in extra_fields:
+                field_name = field.get("name")
+                r = int(field.get("row", 0))
+                c = int(field.get("col", 0))
+                
+                try:
+                    val = df_raw.iloc[r, c]
+                    context[field_name] = val
+                    logging.info(f"[{report_type}] Extraído '{field_name}' da celula ({r},{c}): {val}")
+                except IndexError:
+                    logging.warning(f"[{report_type}] Erro ao extrair '{field_name}': Coordenada ({r},{c}) inválida.")
+                    context[field_name] = "N/D"
+                    
+        except Exception as e:
+            logging.error(f"[{report_type}] Erro ao carregar Excel para extração genérica: {e}")
+
+    return context
+
 REPORT_HANDLERS = {
     "LFRES001": prepare_lfres_context,
     "LFN001": prepare_lfn001_context,

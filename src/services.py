@@ -13,7 +13,7 @@ from src.config.config_manager import load_configs, build_report_paths
 from src.utils.security_utils import sanitize_html, sanitize_subject
 from src.utils.data_utils import parse_brazilian_number, format_currency, format_date
 from src.utils.file_utils import load_excel_data, find_attachment, load_email_templates
-from src.handlers.report_handlers import REPORT_HANDLERS
+from src.handlers.report_handlers import REPORT_HANDLERS, generic_report_handler
 from src.utils.file_utils import ReportProcessingError
 
 def create_graph_draft(access_token: str, recipient: str, subject: str, body: str, attachments: List[Path]) -> bool:
@@ -122,8 +122,12 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
         try:
             context = handler_func(context, row, cfg, report_type=report_type, parsed_valor=context.get('valor'))
         except Exception as e:
-             logging.error(f"Erro no handler {report_type} para {context.get('empresa')}: {e}", exc_info=True)
-             st.warning(f"Erro ao preparar dados específicos ({report_type}) para {context.get('empresa')}: {e}")
+             logging.error(f"Erro no handler específico {report_type}: {e}")
+    else:
+        try:
+            context = generic_report_handler(context, row, cfg, report_type=report_type)
+        except Exception as e:
+             logging.error(f"Erro no handler genérico {report_type}: {e}")
 
 
     selected_template, variant_name = resolve_variant(template_key, report_cfg, context)
