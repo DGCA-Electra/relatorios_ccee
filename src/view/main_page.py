@@ -6,14 +6,19 @@ from src.config.config_manager import load_configs
 import src.services as services
 from src.utils.dataframe_utils import tratar_valores_df
 import streamlit.components.v1 as components
+from datetime import datetime
 
 def init_state():
+    mes_atual_idx = datetime.now().month - 1
+    mes_nome = config.MESES[mes_atual_idx] if 0 <= mes_atual_idx < len(config.MESES) else config.MESES[0]
+
     defaults = {
         "report_type": "GFN001",
         "analyst": "Artur Bello Rodrigues",
-        "month": "JANEIRO",
-        "year": 2025
+        "month": mes_nome,
+        "year": str(datetime.now().year)
     }
+    
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v

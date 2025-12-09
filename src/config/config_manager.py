@@ -1,30 +1,38 @@
 import json
+import os
 from pathlib import Path
 from typing import Dict, Any
 from src.config.config import DEFAULT_CONFIGS, PATH_CONFIGS, CONFIG_FILE
 
-def get_user_paths(username: str = None) -> Dict[str, str]:
-    """
-    Gera os caminhos padrão para o sistema.
-    Se 'username' for passado, usa ele. Caso contrário, pega do sistema.
-    """
-    import os
-    if not username:
-        current_user = os.getenv('USERNAME', 'malik.mourad')
-    else:
-        current_user = username
-
-    user_base = f"{PATH_CONFIGS['user_base']}/{current_user}"
-    
+def get_raw_user_paths(username: str) -> Dict[str, str]:
+    """Gera os caminhos base para um usuário específico (sem validar existência)."""
+    user_base = f"{PATH_CONFIGS['user_base']}/{username}"
     return {
         "raiz_sharepoint": f"{user_base}/{PATH_CONFIGS['sharepoint_root']}",
         "contratos_email_path": f"{user_base}/{PATH_CONFIGS['contatos_email']}"
     }
 
+def resolve_best_paths(preferred_username: str = None) -> Dict[str, str]:
+    """
+    Tenta encontrar os caminhos válidos.
+    1. Tenta o usuário preferencial (da rede/login).
+    2. Se o caminho não existir, faz fallback para o usuário local (os.environ).
+    """
+    if preferred_username:
+        paths = get_raw_user_paths(preferred_username)
+        if os.path.exists(paths["raiz_sharepoint"]):
+            return paths
+        print(f"Aviso: Caminho de rede para '{preferred_username}' não encontrado. Tentando local...")
+
+    local_user = os.getenv('USERNAME', 'malik.mourad')
+    paths = get_raw_user_paths(local_user)
+    
+    return paths
+
 def build_report_paths(report_type: str, ano: str, mes: str, username: str = None) -> Dict[str, str]:
     """
-    Constrói os caminhos específicos para um relatório.
-    Agora aceita 'username' opcional para montar o caminho dinâmico.
+    Constrói os caminhos específicos para um relatório, resolvendo automaticamente
+    se deve usar caminho de rede ou local.
     """
     if report_type not in DEFAULT_CONFIGS:
         raise ValueError(f"Tipo de relatório '{report_type}' não reconhecido")
@@ -40,7 +48,7 @@ def build_report_paths(report_type: str, ano: str, mes: str, username: str = Non
     mes_abrev = mes.lower()[:3]
     ano_2dig = ano[-2:]
 
-    user_paths = get_user_paths(username)
+    user_paths = resolve_best_paths(username)
     
     path_template = DEFAULT_CONFIGS[report_type].get("path_template", {})
     

@@ -149,6 +149,16 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
 
     attachments = []
     filename = build_filename(str(row.get("Empresa","Desconhecida")), report_type, common.get("month_long", "").upper(), str(common.get("year","")))
+    
+    main_cache = cfg.get("_pdf_cache_main", {})
+    path = main_cache.get(filename.upper())
+
+    if path:
+        attachments.append(path)
+        logging.info(f"Anexo principal encontrado para {context.get('empresa')}: {filename}")
+    else:
+        logging.debug(f"Anexo não encontrado no cache: {filename}")
+
     if cfg.get("pdfs_dir"):
         try:
             path = find_attachment(cfg["pdfs_dir"], filename)
@@ -158,20 +168,15 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
         except Exception as e:
             logging.error(f"Erro ao procurar anexo principal para {context.get('empresa')}: {e}")
     if report_type == "GFN001":
-        try:
-            filename_sum = build_filename(str(row.get("Empresa","Desconhecida")), "SUM001", common.get("month_long", "").upper(), str(common.get("year","")))
-            base_dir = Path(cfg.get("pdfs_dir", ""))
-            if base_dir.parent and base_dir.parent.parent:
-                memoria_calc_dir = base_dir.parent.parent / "Sumário" / "SUM001 - Memória_de_Cálculo"
-                sum_path = find_attachment(str(memoria_calc_dir), filename_sum)
-                if sum_path:
-                    attachments.append(sum_path)
-                    logging.info(f"Anexo SUM001 encontrado para {context.get('empresa')}: {filename_sum}")
-            else:
-                 logging.warning(f"Não foi possível determinar o diretório pai para buscar o anexo SUM001 (base_dir: {cfg.get('pdfs_dir')}).")
-        except Exception as e:
-            logging.error(f"Erro ao procurar anexo SUM001 para {context.get('empresa')}: {e}")
-
+        filename_sum = build_filename(str(row.get("Empresa","Desconhecida")), "SUM001", common.get("month_long", "").upper(), str(common.get("year","")))
+        sum_cache = cfg.get("_pdf_cache_sumario", {})
+        
+        sum_path = sum_cache.get(filename_sum.upper())
+        if sum_path:
+            attachments.append(sum_path)
+            logging.info(f"Anexo SUM001 encontrado (Cache): {filename_sum}")
+        else:
+            logging.debug(f"Anexo SUM001 não encontrado no cache: {filename_sum}")
 
     subject_tpl = selected_template.get("subject_template", f"{report_type} - {context.get('empresa')}") # Default mais seguro
     body_tpl = selected_template.get("body_html", "")
@@ -307,72 +312,96 @@ def load_and_process_data(cfg: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.DataFra
     
     return df_dados, df_contatos
 
-def process_reports(report_type: str, analyst: str, month: str, year: str) -> List[Dict[str, Any]]:
+def _index_directory(directory: str) -> Dict[str, Path]:
     """
-    Processa relatórios, renderiza e-mails e tenta criar rascunhos via API Graph.
+    Lista todos os arquivos PDF de um diretório e retorna um dicionário
+    { "NOME_DO_ARQUIVO.PDF": Path_Completo } para busca rápida (O(1)).
+    A chave é armazenada em MAIÚSCULO para garantir busca case-insensitive.
+    """
+    if not directory:
+        return {}
+    
+    path_obj = Path(directory)
+    if not path_obj.exists():
+        logging.warning(f"Tentativa de indexar diretório inexistente: {directory}")
+        return {}
 
-    Returns:
-        Lista de dicionários, um para cada e-mail *efetivamente* criado com sucesso pela API.
+    cache = {f.name.upper(): f for f in path_obj.glob("*.pdf")}
+    logging.info(f"Diretório indexado: {directory} ({len(cache)} arquivos encontrados)")
+    return cache
+
+def _prepare_report_data(report_type: str, analyst: str, month: str, year: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    """
+    Função interna para carregar configs e dados.
+    A decisão de usar caminho de REDE ou LOCAL agora é feita automaticamente pelo config_manager.
     """
     all_configs = load_configs()
     cfg = all_configs.get(report_type)
     if not cfg:
-        logging.error(f"Configuração para '{report_type}' não encontrada ao iniciar process_reports.")
         raise ReportProcessingError(f"Configuração para '{report_type}' não encontrada.")
 
     user_info = st.session_state.get("user_info", {})
     email_usuario = user_info.get("userPrincipalName", "")
-    username_rede = None
+    username_rede = email_usuario.split("@")[0] if (email_usuario and "@" in email_usuario) else None
     
-    if email_usuario and "@" in email_usuario:
-        username_rede = email_usuario.split("@")[0]
-        logging.info(f"Usando caminho de rede para o usuário: {username_rede}")
-    else:
-        logging.warning("Usuário não logado ou e-mail inválido. Usando usuário do sistema (fallback).")
-        
-    logging.info(f"Iniciando processamento para Relatório: {report_type}, Analista: {analyst}, Mês/Ano: {month}/{year}")
+    if username_rede:
+        logging.info(f"Usuário identificado para preferência de caminhos: {username_rede}")
 
     try:
         paths = build_report_paths(report_type, year, month, username=username_rede)
         cfg.update(paths)
+        
         df_dados, df_contatos = load_and_process_data(cfg)
         
     except FileNotFoundError as e:
-        if username_rede:
-            logging.warning(f"Pasta do usuário '{username_rede}' não encontrada. Tentando fallback para usuário local...")
-            try:
-                paths = build_report_paths(report_type, year, month, username=None)
-                cfg.update(paths)
-                df_dados, df_contatos = load_and_process_data(cfg)
-                logging.info(f"Sucesso no fallback: Dados carregados usando caminho local.")
-            
-            except FileNotFoundError as e2:
-                logging.error(f"Erro fatal: Arquivos não encontrados nem para '{username_rede}' nem localmente. {e2}")
-                raise ReportProcessingError(f"Arquivos não encontrados. Verifique se o caminho existe para o usuário logado ou local.")
-        else:
-            logging.error(f"Erro ao carregar arquivos base (Excel): {e}", exc_info=True)
-            raise ReportProcessingError(f"Erro ao carregar arquivos de dados/contato: {e}")
-            
+        logging.error(f"Arquivos não encontrados (nem rede nem local): {e}")
+        raise ReportProcessingError(f"Arquivos base não encontrados. Verifique a existência das pastas ou arquivos Excel.")
     except Exception as e:
-         logging.error(f"Erro inesperado ao carregar/processar dados iniciais: {e}", exc_info=True)
+         logging.error(f"Erro inesperado ao carregar dados iniciais: {e}", exc_info=True)
          raise ReportProcessingError(f"Erro inesperado ao carregar dados: {e}")
 
+    if "pdfs_dir" in cfg:
+        cfg["_pdf_cache_main"] = _index_directory(cfg["pdfs_dir"])
+
+        if report_type == "GFN001":
+            base_dir = Path(cfg["pdfs_dir"])
+            try:
+                if base_dir.parent and base_dir.parent.parent:
+                    sum_dir = base_dir.parent.parent / "Sumário" / "SUM001 - Memória_de_Cálculo"
+                    if sum_dir.exists():
+                        cfg["_pdf_cache_sumario"] = _index_directory(str(sum_dir))
+                    else:
+                        logging.warning(f"Diretório de sumário não encontrado: {sum_dir}")
+            except Exception as e:
+                logging.error(f"Erro ao tentar indexar diretório de sumários: {e}")
+
     df_merged = pd.merge(df_dados, df_contatos, on="Empresa", how="left")
+    
     if "Analista" not in df_merged.columns:
-        logging.error("Coluna 'Analista' não encontrada no DataFrame mesclado. Verifique mapeamentos e planilha de contatos.")
         raise ReportProcessingError("Coluna 'Analista' ausente nos dados. Verifique a configuração e a planilha de contatos.")
 
     df_filtered = df_merged[df_merged["Analista"] == analyst].copy()
 
     if df_filtered.empty:
         logging.warning(f"Nenhum dado encontrado para o analista '{analyst}' após filtro.")
-        return []
+        return df_filtered, cfg
 
     missing_email_mask = df_filtered["Email"].isna() | (df_filtered["Email"].str.strip() == "")
     if missing_email_mask.any():
-        missing_companies = df_filtered.loc[missing_email_mask, "Empresa"].tolist()
-        logging.warning(f"E-mail não encontrado para as seguintes empresas: {', '.join(missing_companies)}")
         df_filtered.loc[missing_email_mask, "Email"] = "EMAIL_NAO_ENCONTRADO"
+
+    return df_filtered, cfg
+
+def process_reports(report_type: str, analyst: str, month: str, year: str) -> List[Dict[str, Any]]:
+    """
+    Processa relatórios, renderiza e-mails e tenta criar rascunhos via API Graph.
+    """
+    logging.info(f"Iniciando processamento: {report_type}, Analista: {analyst}, {month}/{year}")
+
+    df_filtered, cfg = _prepare_report_data(report_type, analyst, month, year)
+
+    if df_filtered.empty:
+        return []
 
     common_data = {
         "analyst": analyst,
@@ -389,34 +418,26 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> Li
 
     access_token = st.session_state.get("ms_token", {}).get("access_token")
     if not access_token:
-        st.error("Erro: Usuário não autenticado ou sessão expirada. Não é possível criar rascunhos.")
-        logging.error("Tentativa de processar relatórios sem token de acesso válido na sessão.")
+        st.error("Erro: Usuário não autenticado. Não é possível criar rascunhos.")
         return []
 
     for idx, row in df_filtered.iterrows():
         try:
             logging.info(f"--- Processando Linha {idx+1}/{len(df_filtered)}: {row.get('Empresa', 'N/A')} ---")
 
-            email_data = render_email_from_template(
-                report_type,
-                row.to_dict(),
-                common_data,
-                cfg
-            )
+            email_data = render_email_from_template(report_type, row.to_dict(), common_data, cfg)
 
             if email_data is None:
                 skipped_count += 1
-                logging.info(f"E-mail pulado (lógica interna, ex: variante SKIP) para {row.get('Empresa')}")
                 continue
 
             recipient_email = row.get("Email", "")
-            valid_recipients = [addr.strip() for addr in recipient_email.split(';') if addr.strip() and '@' in addr]
-            if not valid_recipients:
-                 logging.warning(f"Nenhum destinatário válido para {row.get('Empresa')} ('{recipient_email}'). Pulando chamada da API.")
-                 st.warning(f"E-mail para {row.get('Empresa')} não pôde ser criado (sem destinatário válido).")
+            
+            # Validação simples antes de chamar a API
+            if not recipient_email or "EMAIL_NAO_ENCONTRADO" in recipient_email:
+                 logging.warning(f"E-mail inválido para {row.get('Empresa')}. Pulando.")
                  api_errors += 1
                  continue
-
 
             success = create_graph_draft(
                 access_token,
@@ -438,70 +459,27 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> Li
                 })
             else:
                 api_errors += 1
-                logging.error(f"Falha na chamada da API Graph para criar rascunho para {row.get('Empresa')}")
 
         except ReportProcessingError as rpe:
              render_errors += 1
-             logging.error(f"Erro de processamento (ReportProcessingError) para {row.get('Empresa', 'Empresa desconhecida')}: {rpe}", exc_info=True)
-             st.warning(f"Erro ao processar {row.get('Empresa', 'Empresa desconhecida')}: {rpe}")
+             logging.error(f"Erro processamento: {rpe}")
              continue
         except Exception as e:
             render_errors += 1
-            logging.error(f"Erro GERAL inesperado ao processar linha para {row.get('Empresa', 'Empresa desconhecida')}: {e}", exc_info=True)
-            st.error(f"Erro inesperado ao processar {row.get('Empresa', 'Empresa desconhecida')}: {e}")
+            logging.error(f"Erro inesperado: {e}")
             continue
 
-    total_processed = len(df_filtered)
-    final_message = f"Processamento concluído: {created_count} de {total_processed} rascunhos criados com sucesso."
-    if skipped_count > 0:
-        final_message += f" {skipped_count} e-mails foram pulados intencionalmente."
-    if render_errors > 0:
-        final_message += f" {render_errors} falharam durante a preparação/renderização."
-    if api_errors > 0:
-        final_message += f" {api_errors} falharam durante a criação via API (verifique logs/mensagens de erro acima)."
-
-    logging.info(final_message)
-    logging.info(f"{'='*60}\n")
+    logging.info(f"Fim do processamento. Criados: {created_count}. Erros Render: {render_errors}. Erros API: {api_errors}")
     return results_success
 
 @st.cache_data(show_spinner=False)
 def preview_dados(report_type: str, analyst: str, month: str, year: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """
-    Carrega dados para pré-visualização sem enviar e-mails.
-    
-    Args:
-        report_type: Tipo do relatório
-        analyst: Nome do analista
-        month: Mês (nome por extenso)
-        year: Ano
-        
-    Returns:
-        Tupla com (DataFrame filtrado, configurações)
+    Carrega dados para pré-visualização (apenas Wrapper da função comum).
     """
-    all_configs = load_configs()
-    cfg = all_configs.get(report_type)
-    if not cfg:
-        raise ReportProcessingError(f"'{report_type}' não encontrado nas configurações.")
-
-    username_rede = None
-    try:
-        user_info = st.session_state.get("user_info", {})
-        email_usuario = user_info.get("userPrincipalName", "")
-        if email_usuario and "@" in email_usuario:
-            username_rede = email_usuario.split("@")[0]
-    except Exception:
-        pass
-    report_paths = build_report_paths(report_type, year, month, username=username_rede)
-    cfg.update(report_paths)
-    
-    df_dados, df_contatos = load_and_process_data(cfg)
-    
-    df_merged = pd.merge(df_dados, df_contatos, on="Empresa", how="left")
-    df_filtered = df_merged[df_merged["Analista"] == analyst].copy()
+    df_filtered, cfg = _prepare_report_data(report_type, analyst, month, year)
     
     if df_filtered.empty:
         raise ReportProcessingError(f"Nenhum registro encontrado para o analista '{analyst}'")
-
-    df_filtered["Email"] = df_filtered["Email"].fillna("EMAIL_NAO_ENCONTRADO")
-    
+        
     return df_filtered, cfg

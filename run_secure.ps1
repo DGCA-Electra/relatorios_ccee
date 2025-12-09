@@ -8,4 +8,4 @@ Write-Host "Ativando ambiente virtual..."
 
 # Executa o Streamlit NORMAL (sem SSL local, deixe o túnel cuidar disso)
 Write-Host "Iniciando Streamlit..."
-streamlit run app.py --server.port=8501g
+streamlit run app.py --server.port=8501

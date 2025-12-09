@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import datetime
 
 CONFIG_FILE = Path('src/config/config_relatorios.json')
 
@@ -8,7 +9,7 @@ ANALISTAS = [
 ]
 MESES = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
          'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO']
-ANOS = [str(y) for y in range(2025, 2030)]
+ANOS = [str(y) for y in range(datetime.now().year, datetime.now().year + 5)]
 
 PATH_CONFIGS = {
     "sharepoint_root": "ELECTRA COMERCIALIZADORA DE ENERGIA S.A/GE - ECE/DGCA/DGA/CCEE/Relatórios CCEE",
