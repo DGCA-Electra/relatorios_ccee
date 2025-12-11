@@ -159,18 +159,20 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
 
     if path:
         attachments.append(path)
-        logging.info(f"Anexo principal encontrado para {context.get('empresa')}: {filename}")
-    else:
-        logging.debug(f"Anexo não encontrado no cache: {filename}")
-
-    if cfg.get("pdfs_dir"):
+        logging.info(f"Anexo principal encontrado (Cache) para {context.get('empresa')}: {filename}")
+    elif cfg.get("pdfs_dir"):
         try:
             path = find_attachment(cfg["pdfs_dir"], filename)
             if path:
                 attachments.append(path)
-                logging.info(f"Anexo principal encontrado para {context.get('empresa')}: {filename}")
+                logging.info(f"Anexo principal encontrado (Disco) para {context.get('empresa')}: {filename}")
+            else:
+                 logging.debug(f"Anexo não encontrado no diretório: {filename}")
         except Exception as e:
             logging.error(f"Erro ao procurar anexo principal para {context.get('empresa')}: {e}")
+    else:
+        logging.debug(f"Anexo não encontrado no cache e sem diretório configurado: {filename}")
+
     if report_type == "GFN001":
         filename_sum = build_filename(str(row.get("Empresa","Desconhecida")), "SUM001", common.get("month_long", "").upper(), str(common.get("year","")))
         sum_cache = cfg.get("_pdf_cache_sumario", {})
@@ -230,7 +232,8 @@ def render_email_from_template(report_type: str, row: Dict[str, Any], common: Di
         "body": sanitize_html(body),
         "attachments": attachments,
         "missing_placeholders": missing_placeholders,
-        "attachment_warnings": []
+        "attachment_warnings": [],
+        "final_data": context
     }
 
     return result
@@ -453,9 +456,11 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> Li
 
             if success:
                 created_count += 1
+                data_final = email_data.get("final_data", {}).get("data") or row.get("Data")
+                
                 results_success.append({
                     "empresa": row.get("Empresa", "N/A"),
-                    "data": format_date(row.get("Data")),
+                    "data": format_date(data_final),
                     "valor": format_currency(row.get("Valor", 0)),
                     "email": recipient_email,
                     "anexos_count": len(email_data.get("attachments", [])),
@@ -479,7 +484,7 @@ def process_reports(report_type: str, analyst: str, month: str, year: str) -> Li
 @st.cache_data(show_spinner=False)
 def preview_dados(report_type: str, analyst: str, month: str, year: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """
-    Carrega dados para pré-visualização (apenas Wrapper da função comum).
+    Carrega dados para pré-visualização.
     """
     df_filtered, cfg = _prepare_report_data(report_type, analyst, month, year)
     
