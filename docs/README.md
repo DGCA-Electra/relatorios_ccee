@@ -1,4 +1,3 @@
-```markdown
 # 🤖 RPA Envio de Emails - Streamlit & Microsoft Graph API
 
 ## 📋 Visão Geral
@@ -198,4 +197,3 @@ pre-commit run --all-files
 
 **Desenvolvido por:** Malik Ribeiro Mourad  
 **Licença:** Uso interno - Electra Energy
-```
