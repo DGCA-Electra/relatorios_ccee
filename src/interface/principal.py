@@ -66,8 +66,8 @@ def exibir_pagina_principal() -> None:
             st.rerun()
 
     if st.session_state.get("gatilho_envio"):
-        access_token = st.session_state.get("ms_token", {}).get("access_token")
-        if access_token:
+        token_acesso = st.session_state.get("ms_token", {}).get("access_token")
+        if token_acesso:
             with st.spinner("Criando rascunhos na sua caixa de e-mail... Aguarde."):
                 try:
                     resultados = services.informa_processos(
@@ -96,39 +96,39 @@ def exibir_pagina_principal() -> None:
                     mes=mes, 
                     ano=str(ano)
                 )
-                st.session_state.raw_preview_data = df_filtrado
-                st.session_state.preview_cfg = config_previa_dados
+                st.session_state.dados_previa_brutos = df_filtrado
+                st.session_state.config_previa = config_previa_dados
                 st.session_state.dados_formulario = {'tipo': tipo, 'analista': analista_final, 'mes': mes, 'ano': ano}
                 st.success(f'✅ Dados carregados com sucesso! {len(df_filtrado)} empresas encontradas para {analista_final}.')
             except services.ErroProcessamento as e:
                 st.error(f"❌ Erro de processamento: {e}")
         st.session_state.gatilho_previa = False
 
-    def exibir_previa_email(subject: str, body_html: str):
+    def exibir_previa_email(assunto: str, corpo_html: str):
         html = f"""
         <html><head><style>
           body {{ color: black; font-family: Inter, Arial, sans-serif; }}
           @media (prefers-color-scheme: dark) {{ body {{ color: white; }} }}
-        </style></head><body><h4>{subject}</h4><hr/>{body_html}</body></html>
+        </style></head><body><h4>{assunto}</h4><hr/>{corpo_html}</body></html>
         """
         components.html(html, height=400, scrolling=True)
 
-    if 'raw_preview_data' in st.session_state:
-        df_raw = st.session_state.raw_preview_data
-        cfg = st.session_state.get('preview_cfg', {})
-        if not df_raw.empty:
+    if 'dados_previa_brutos' in st.session_state:
+        df_bruto = st.session_state.dados_previa_brutos
+        cfg = st.session_state.get('config_previa', {})
+        if not df_bruto.empty:
             st.subheader(f"Dados para {tipo} - {mes}/{ano} - {analista_final}")
-            df_exibicao = tratar_valores_df(df_raw.copy())
+            df_exibicao = tratar_valores_df(df_bruto.copy())
             st.dataframe(df_exibicao.reset_index(drop=True), use_container_width=True)
             
             st.subheader("Pré-visualização do E-mail")
-            limite_visualizacao = min(5, len(df_raw))
+            limite_visualizacao = min(5, len(df_bruto))
             for idx in range(limite_visualizacao):
-                dados_empresa = df_raw.iloc[idx].to_dict()
+                dados_empresa = df_bruto.iloc[idx].to_dict()
                 if 'Email' in dados_empresa:
                     dados_empresa['Email'] = unir_emails_seguro(dados_empresa['Email'])
                     
-                common = {
+                dados_comuns = {
                     'mes_long': mes.title(),
                     'mes_num': {m.upper(): f"{i+1:02d}" for i, m in enumerate(config.MESES)}.get(mes.upper(), '00'),
                     'ano': str(ano),
@@ -136,15 +136,15 @@ def exibir_pagina_principal() -> None:
                 }
                 
                 try:
-                    renderizado = services.renderizar_email_modelo(tipo, dados_empresa, common, cfg)
+                    renderizado = services.renderizar_email_modelo(tipo, dados_empresa, dados_comuns, cfg)
                     with st.expander(f"Prévia #{idx+1} - {dados_empresa.get('Empresa','')}", expanded=False):
                         exibir_previa_email(renderizado['assunto'], renderizado['corpo'])
                 except Exception as e:
                     st.warning(f"Falha ao renderizar template para {dados_empresa.get('Empresa','')}: {e}")
 
         if st.button("🗑️ Limpar Visualização", key="limpar_preview"):
-            del st.session_state.raw_preview_data
-            if 'preview_cfg' in st.session_state: del st.session_state.preview_cfg
+            del st.session_state.dados_previa_brutos
+            if 'config_previa' in st.session_state: del st.session_state.config_previa
             st.rerun()
 
     if 'resultados' in st.session_state and st.session_state.resultados:
@@ -152,7 +152,7 @@ def exibir_pagina_principal() -> None:
         formulario = st.session_state.get('dados_formulario', {})
         st.header(f"📤 Resultado do Envio - {formulario.get('tipo', 'N/A')} - {formulario.get('mes', 'N/A')}/{formulario.get('ano', 'N/A')}")
         
-        total_criados = resultados[-1]['created_count'] if resultados else 0
+        total_criados = resultados[-1]['contagem_criados'] if resultados else 0
         
         col1, col2 = st.columns(2)
         col1.metric("Empresas Processadas", len(resultados))

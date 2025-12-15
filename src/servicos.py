@@ -89,20 +89,20 @@ def criar_rascunho_graph(token_acesso: str, destinatario: str, assunto: str, cor
         logging.error(f"Erro inesperado em create_graph_draft: {e}", exc_info=True)
         st.error(f"Erro inesperado ao criar rascunho: {e}")
         return False
-def renderizar_email_modelo(tipo_relatorio: str, row: Dict[str, Any], common: Dict[str, Any], config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def renderizar_email_modelo(tipo_relatorio: str, row: Dict[str, Any], dados_comuns: Dict[str, Any], config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     templates = carregar_templates_email()
     template_key = "LFRES" if tipo_relatorio.startswith("LFRES") else tipo_relatorio
     report_config = templates.get(template_key)
     if not report_config:
         raise ErroProcessamento(f"Template para '{template_key}' não encontrado.")
-    context = {**row, **common, **config}
+    context = {**row, **dados_comuns, **config}
     context.update({
         "empresa": row.get("Empresa"),
-        "mesext": common.get("mes_long"),
-        "mes": common.get("mes_num"),
-        "ano": common.get("ano"),
+        "mesext": dados_comuns.get("mes_long"),
+        "mes": dados_comuns.get("mes_num"),
+        "ano": dados_comuns.get("ano"),
         "data": row.get("Data"),
-        "assinatura": common.get("analista"),
+        "assinatura": dados_comuns.get("analista"),
         "valor": converter_numero_br(row.get("Valor", 0))
     })
     logging.info(f"Processando {context.get('empresa', 'N/A')} - Tipo: {tipo_relatorio} - Valor original: '{row.get('Valor', 0)}' -> Parseado: {context.get('valor', 'N/A')}")
@@ -135,7 +135,7 @@ def renderizar_email_modelo(tipo_relatorio: str, row: Dict[str, Any], common: Di
         if key in context and context.get(key) is not None:
              context[key] = formatar_data(context[key])
     anexos = []
-    nome_arquivo = gerar_nome_arquivo(str(row.get("Empresa","Desconhecida")), tipo_relatorio, common.get("mes_long", "").upper(), str(common.get("ano","")))
+    nome_arquivo = gerar_nome_arquivo(str(row.get("Empresa","Desconhecida")), tipo_relatorio, dados_comuns.get("mes_long", "").upper(), str(dados_comuns.get("ano","")))
     main_cache = config.get("_pdf_cache_main", {})
     caminho = main_cache.get(nome_arquivo.upper())
     if caminho:
@@ -154,7 +154,7 @@ def renderizar_email_modelo(tipo_relatorio: str, row: Dict[str, Any], common: Di
     else:
         logging.debug(f"Anexo não encontrado no cache e sem diretório configurado: {nome_arquivo}")
     if tipo_relatorio == "GFN001":
-        nome_arquivo_sum = gerar_nome_arquivo(str(row.get("Empresa","Desconhecida")), "SUM001", common.get("mes_long", "").upper(), str(common.get("ano","")))
+        nome_arquivo_sum = gerar_nome_arquivo(str(row.get("Empresa","Desconhecida")), "SUM001", dados_comuns.get("mes_long", "").upper(), str(dados_comuns.get("ano","")))
         sum_cache = config.get("_pdf_cache_sumario", {})
         sum_caminho = sum_cache.get(nome_arquivo_sum.upper())
         if sum_caminho:
@@ -194,7 +194,7 @@ def renderizar_email_modelo(tipo_relatorio: str, row: Dict[str, Any], common: Di
         logging.error(f"Erro ao renderizar template Jinja2 para {context.get('empresa')}: {e}", exc_info=True)
         assunto = f"ERRO NO TEMPLATE - {tipo_relatorio} - {context.get('empresa')}"
         corpo = f"<p>Ocorreu um erro ao gerar o corpo deste e-mail a partir do template.</p><p>Erro: {e}</p>"
-    assinatura_html = f"<br><p>Atenciosamente,</p><p><strong>{common.get('analista', 'Equipe DGCA')}</strong></p>"
+    assinatura_html = f"<br><p>Atenciosamente,</p><p><strong>{dados_comuns.get('analista', 'Equipe DGCA')}</strong></p>"
     if "<p>Atenciosamente," not in corpo:
          corpo += assinatura_html
     result = {
@@ -341,14 +341,14 @@ def informa_processos(tipo_relatorio: str, analista: str, mes: str, ano: str) ->
     df_filtrado, config = _preparar_dados_relatorio(tipo_relatorio, analista, mes, ano)
     if df_filtrado.empty:
         return []
-    common_data = {
+    dados_comuns = {
         "analista": analista,
         "mes_long": mes.title(),
         "mes_num": {m.upper(): f"{i+1:02d}" for i, m in enumerate(MESES)}.get(mes.upper(), "??"),
         "ano": ano
     }
     results_success = []
-    created_count = 0
+    contagem_criados = 0
     render_errors = 0
     api_errors = 0
     skipped_count = 0
@@ -359,8 +359,8 @@ def informa_processos(tipo_relatorio: str, analista: str, mes: str, ano: str) ->
     for idx, row in df_filtrado.iterrows():
         try:
             logging.info(f"--- Processando Linha {idx+1}/{len(df_filtrado)}: {row.get('Empresa', 'N/A')} ---")
-            email_data = renderizar_email_modelo(tipo_relatorio, row.to_dict(), common_data, config)
-            if email_data is None:
+            dados_email = renderizar_email_modelo(tipo_relatorio, row.to_dict(), dados_comuns, config)
+            if dados_email is None:
                 skipped_count += 1
                 continue
             destinatario_email = row.get("Email", "")
@@ -372,20 +372,20 @@ def informa_processos(tipo_relatorio: str, analista: str, mes: str, ano: str) ->
             success = criar_rascunho_graph(
                 token_acesso,
                 destinatario_email,
-                email_data["assunto"],
-                email_data["corpo"],
-                email_data["anexos"]
+                dados_email["assunto"],
+                dados_email["corpo"],
+                dados_email["anexos"]
             )
             if success:
-                created_count += 1
-                data_final = email_data.get("final_data", {}).get("data") or row.get("Data")
+                contagem_criados += 1
+                data_final = dados_email.get("final_data", {}).get("data") or row.get("Data")
                 results_success.append({
                     "empresa": row.get("Empresa", "N/A"),
                     "data": formatar_data(data_final),
                     "valor": formatar_moeda(row.get("Valor", 0)),
                     "email": destinatario_email,
-                    "anexos_count": len(email_data.get("anexos", [])),
-                    "created_count": created_count
+                    "contagem_anexos": len(dados_email.get("anexos", [])),
+                    "contagem_criados": contagem_criados
                 })
             else:
                 api_errors += 1
@@ -397,7 +397,7 @@ def informa_processos(tipo_relatorio: str, analista: str, mes: str, ano: str) ->
             render_errors += 1
             logging.error(f"Erro inesperado: {e}")
             continue
-    logging.info(f"Fim do processamento. Criados: {created_count}. Erros Render: {render_errors}. Erros API: {api_errors}")
+    logging.info(f"Fim do processamento. Criados: {contagem_criados}. Erros Render: {render_errors}. Erros API: {api_errors}")
     return results_success
 @st.cache_data(show_spinner=False)
 def visualizar_previa_dados(tipo_relatorio: str, analista: str, mes: str, ano: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:

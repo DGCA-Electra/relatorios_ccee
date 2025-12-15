@@ -30,22 +30,22 @@ def show_config_page() -> None:
                 st.warning("Nenhum relatório configurado.")
             else:
                 tabs = st.tabs(tab_names)
-                for i, (report_type, config_data) in enumerate(current_configs.items()):
+                for i, (tipo_relatorio, config_data) in enumerate(current_configs.items()):
                     with tabs[i]:
-                        st.subheader(f"Configurações para {report_type}")
+                        st.subheader(f"Configurações para {tipo_relatorio}")
                         col1, col2 = st.columns(2)
                         with col1:
-                            sheet_dados = st.text_input("Nome da Aba de Dados", value=config_data.get('sheet_dados', ''), key=f"sd_{report_type}")
-                            sheet_contatos = st.text_input("Nome da Aba de Contatos", value=config_data.get('sheet_contatos', ''), key=f"sc_{report_type}")
+                            planilha_dados = st.text_input("Nome da Aba de Dados", value=config_data.get('planilha_dados', ''), key=f"sd_{tipo_relatorio}")
+                            planilha_contatos = st.text_input("Nome da Aba de Contatos", value=config_data.get('planilha_contatos', ''), key=f"sc_{tipo_relatorio}")
                         with col2:
-                            header_row_val = int(config_data.get('header_row', 0))
-                            header_row = st.number_input("Linha do Cabeçalho (0 = Linha 1)", value=header_row_val, min_value=0, key=f"hr_{report_type}")
-                        data_columns = st.text_area("Mapeamento de Colunas (Texto)", value=config_data.get('data_columns', ''), height=70, key=f"dc_{report_type}", help="Legado: ColunaExcel:NomePadrao")
-                        current_configs[report_type].update({
-                            'sheet_dados': sheet_dados,
-                            'sheet_contatos': sheet_contatos,
-                            'header_row': header_row,
-                            'data_columns': data_columns
+                            linha_cabecalho_val = int(config_data.get('linha_cabecalho', 0))
+                            linha_cabecalho = st.number_input("Linha do Cabeçalho (0 = Linha 1)", value=linha_cabecalho_val, min_value=0, key=f"hr_{tipo_relatorio}")
+                        colunas_dados = st.text_area("Mapeamento de Colunas (Texto)", value=config_data.get('colunas_dados', ''), height=70, key=f"dc_{tipo_relatorio}", help="Legado: ColunaExcel:NomePadrao")
+                        current_configs[tipo_relatorio].update({
+                            'planilha_dados': planilha_dados,
+                            'planilha_contatos': planilha_contatos,
+                            'linha_cabecalho': linha_cabecalho,
+                            'colunas_dados': colunas_dados
                         })
             if st.form_submit_button("💾 Salvar Alterações"):
                 try:
@@ -78,7 +78,7 @@ def show_config_page() -> None:
                 {"Coluna no Excel": "E-mail Contato", "Campo no Sistema": "Email"},
                 {"Coluna no Excel": "Data Vcto", "Campo no Sistema": "Data"},
             ])
-            column_config = {
+            config_colunas = {
                 "Campo no Sistema": st.column_config.SelectboxColumn(
                     "Campo no Sistema",
                     help="Como o sistema deve entender essa coluna?",
@@ -86,9 +86,9 @@ def show_config_page() -> None:
                     required=True
                 )
             }
-            edited_map = st.data_editor(
+            mapa_editado = st.data_editor(
                 df_map_template, 
-                column_config=column_config, 
+                column_config=config_colunas, 
                 num_rows="dynamic", 
                 use_container_width=True,
                 key="editor_mapping"
@@ -118,7 +118,7 @@ def show_config_page() -> None:
                     st.error(f"O relatório '{new_code}' já existe.")
                 else:
                     map_list = []
-                    for _, row in edited_map.iterrows():
+                    for _, row in mapa_editado.iterrows():
                         col_excel = str(row["Coluna no Excel"]).strip()
                         col_sys = str(row["Campo no Sistema"]).strip()
                         if col_excel and col_sys:
@@ -136,13 +136,13 @@ def show_config_page() -> None:
                                 "col": col_letter_to_index(col_letter)
                             })
                     new_config = {
-                        "sheet_dados": new_sheet_dados,
-                        "sheet_contatos": new_sheet_contatos,
-                        "header_row": excel_header_line - 1,
-                        "data_columns": final_data_columns,
-                        "path_template": {
+                        "planilha_dados": new_sheet_dados,
+                        "planilha_contatos": new_sheet_contatos,
+                        "linha_cabecalho": excel_header_line - 1,
+                        "colunas_dados": final_data_columns,
+                        "modelo_caminho": {
                             "excel_dados": path_excel,
-                            "pdfs_dir": path_pdf
+                            "diretorio_pdfs": path_pdf
                         },
                         "extra_fields": extra_fields_list
                     }
@@ -150,13 +150,13 @@ def show_config_page() -> None:
                         current_configs[new_code] = new_config
                         salvar_configuracoes(current_configs)
                         templates = carregar_templates_email()
-                        placeholders = ["empresa", "mes", "ano"] + [x['name'] for x in extra_fields_list]
+                        variaveis = ["empresa", "mes", "ano"] + [x['name'] for x in extra_fields_list]
                         templates[new_code] = {
-                            "subject_template": f"{new_code} - Relatório - {{empresa}}",
-                            "body_html": f"<p>Segue relatório referente a {new_code}.</p>",
-                            "attachments": [],
-                            "placeholders": placeholders,
-                            "send_mode": "display"
+                            "assunto_template": f"{new_code} - Relatório - {{empresa}}",
+                            "corpo_html": f"<p>Segue relatório referente a {new_code}.</p>",
+                            "anexos": [],
+                            "variaveis": variaveis,
+                            "modo_envio": "display"
                         }
                         salvar_templates_email(templates)
                         st.balloons()
@@ -182,15 +182,15 @@ def show_config_page() -> None:
                 with tabs[i]:
                     st.markdown(f"**Editando:** `{key}`")
                     cfg = templates_json.get(key, {})
-                    has_variants = isinstance(cfg.get('variants'), dict)
-                    variant_keys = list(cfg.get('variants', {}).keys()) if has_variants else []
+                    tem_variantes = isinstance(cfg.get('variantes'), dict)
+                    chaves_variantes = list(cfg.get('variantes', {}).keys()) if tem_variantes else []
                     col_sel, col_act = st.columns([3, 1])
-                    selected_variant = "default"
-                    edit_block = cfg
+                    variante_selecionada = "default"
+                    bloco_edicao = cfg
                     with col_sel:
-                        if has_variants:
-                            selected_variant = st.selectbox(f"Variante ({key})", variant_keys, key=f"var_{key}")
-                            edit_block = cfg['variants'][selected_variant]
+                        if tem_variantes:
+                            variante_selecionada = st.selectbox(f"Variante ({key})", chaves_variantes, key=f"var_{key}")
+                            bloco_edicao = cfg['variantes'][variante_selecionada]
                         else:
                             st.info("Este relatório usa um template único.")
                     with st.expander("🛠️ Modo Avançado (JSON)"):
@@ -205,26 +205,26 @@ def show_config_page() -> None:
                                 st.error(f"JSON inválido: {e}")
                     c_subj, c_mode = st.columns([3, 1])
                     with c_subj:
-                        subj = st.text_input("Assunto do E-mail", value=edit_block.get('subject_template', ''), key=f"subj_{key}_{selected_variant}")
+                        subj = st.text_input("Assunto do E-mail", value=bloco_edicao.get('assunto_template', ''), key=f"subj_{key}_{variante_selecionada}")
                     with c_mode:
-                        mode_opts = ["display", "send"]
-                        curr_mode = edit_block.get('send_mode', 'display')
-                        curr_idx = 0 if 'display' in curr_mode else 1
-                        send_mode = st.selectbox("Modo de Envio", options=mode_opts, index=curr_idx, key=f"sm_{key}_{selected_variant}", help="'Display' cria rascunho. 'Send' envia direto (cuidado).")
-                    body = st.text_area("Corpo do E-mail (HTML)", value=edit_block.get('body_html') or edit_block.get('body_html_credit') or '', height=250, key=f"body_{key}_{selected_variant}", help="Você pode usar HTML básico aqui.")
-                    atts = edit_block.get('attachments', [])
-                    attachments_str = "\n".join(atts) if isinstance(atts, list) else ""
-                    attachments_edit = st.text_area("Anexos Adicionais (Links ou Caminhos - 1 por linha)", value=attachments_str, height=100, key=f"att_{key}_{selected_variant}")
-                    if st.button("💾 Salvar Template", key=f"save_{key}_{selected_variant}"):
-                        new_block = dict(edit_block)
-                        new_block['subject_template'] = subj
-                        new_block['body_html'] = body
-                        new_block['attachments'] = [ln.strip() for ln in attachments_edit.splitlines() if ln.strip()]
-                        new_block['send_mode'] = send_mode
-                        if has_variants:
-                            cfg['variants'][selected_variant] = new_block
+                        opcoes_modo = ["display", "send"]
+                        modo_atual = bloco_edicao.get('modo_envio', 'display')
+                        idx_atual = 0 if 'display' in modo_atual else 1
+                        modo_envio = st.selectbox("Modo de Envio", options=opcoes_modo, index=idx_atual, key=f"sm_{key}_{variante_selecionada}", help="'Display' cria rascunho. 'Send' envia direto (cuidado).")
+                    corpo = st.text_area("Corpo do E-mail (HTML)", value=bloco_edicao.get('corpo_html') or bloco_edicao.get('corpo_html_credit') or '', height=250, key=f"body_{key}_{variante_selecionada}", help="Você pode usar HTML básico aqui.")
+                    anexos = bloco_edicao.get('anexos', [])
+                    anexos_str = "\n".join(anexos) if isinstance(anexos, list) else ""
+                    anexos_edit = st.text_area("Anexos Adicionais (Links ou Caminhos - 1 por linha)", value=anexos_str, height=100, key=f"att_{key}_{variante_selecionada}")
+                    if st.button("💾 Salvar Template", key=f"save_{key}_{variante_selecionada}"):
+                        novo_bloco = dict(bloco_edicao)
+                        novo_bloco['assunto_template'] = subj
+                        novo_bloco['corpo_html'] = corpo
+                        novo_bloco['anexos'] = [ln.strip() for ln in anexos_edit.splitlines() if ln.strip()]
+                        novo_bloco['modo_envio'] = modo_envio
+                        if tem_variantes:
+                            cfg['variantes'][variante_selecionada] = novo_bloco
                         else:
-                            cfg.update(new_block)
+                            cfg.update(novo_bloco)
                         templates_json[key] = cfg
                         try:
                             salvar_templates_email(templates_json)

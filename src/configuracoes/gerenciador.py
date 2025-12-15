@@ -41,18 +41,18 @@ def construir_caminhos_relatorio(report_type: str, ano: str, mes: str, username:
     mes_abrev = mes.lower()[:3]
     ano_2dig = ano[-2:]
     user_paths = resolver_melhores_caminhos(username)
-    path_template = DEFAULT_CONFIGS[report_type].get("path_template", {})
-    paths = {}
-    for key, template in path_template.items():
-        paths[key] = template.format(
+    modelo_caminho = DEFAULT_CONFIGS[report_type].get("modelo_caminho", {})
+    caminhos = {}
+    for chave, template in modelo_caminho.items():
+        caminhos[chave] = template.format(
             sharepoint_root=user_paths["raiz_sharepoint"],
             ano=ano,
             ano_mes=ano_mes,
             mes_abrev=mes_abrev,
             ano_2dig=ano_2dig
         )
-    paths["excel_contatos"] = user_paths["contratos_email_path"]
-    return paths
+    caminhos["excel_contatos"] = user_paths["contratos_email_path"]
+    return caminhos
 def carregar_configuracoes() -> Dict[str, Any]:
     """
     Carrega as configurações do arquivo JSON ou cria com valores padrão.
@@ -96,14 +96,14 @@ def validar_configuracao(config: Dict[str, Any], report_type: str) -> bool:
     Returns:
         True se a configuração é válida, False caso contrário
     """
-    required_fields = ["sheet_dados", "sheet_contatos", "header_row", "data_columns"]
-    for field in required_fields:
-        if field not in config:
-            print(f"Campo obrigatório '{field}' não encontrado em {report_type}")
+    campos_obrigatorios = ["planilha_dados", "planilha_contatos", "linha_cabecalho", "colunas_dados"]
+    for campo in campos_obrigatorios:
+        if campo not in config:
+            print(f"Campo obrigatório '{campo}' não encontrado em {report_type}")
             return False
     try:
-        int(config["header_row"])
+        int(config["linha_cabecalho"])
     except (ValueError, TypeError):
-        print(f"header_row deve ser um número em {report_type}")
+        print(f"linha_cabecalho deve ser um número em {report_type}")
         return False
     return True

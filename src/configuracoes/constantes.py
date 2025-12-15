@@ -19,73 +19,73 @@ PATH_CONFIGS = {
 
 DEFAULT_CONFIGS = {
     "GFN001": {
-        "sheet_dados": "GFN003 - Garantia Financeira po",
-        "sheet_contatos": "Planilha1",
-        "header_row": 30,
-        "data_columns": "Agente:Empresa,Garantia Avulsa (R$):Valor",
-        "path_template": {
+        "planilha_dados": "GFN003 - Garantia Financeira po",
+        "planilha_contatos": "Planilha1",
+        "linha_cabecalho": 30,
+        "colunas_dados": "Agente:Empresa,Garantia Avulsa (R$):Valor",
+        "modelo_caminho": {
             "excel_dados": "{sharepoint_root}/{ano}/{ano_mes}/Garantia Financeira/GFN003 - Excel/ELECTRA_ENERGY_GFN003_{mes_abrev}_{ano_2dig}.xlsx",
-            "pdfs_dir": "{sharepoint_root}/{ano}/{ano_mes}/Garantia Financeira/GFN001"
+            "diretorio_pdfs": "{sharepoint_root}/{ano}/{ano_mes}/Garantia Financeira/GFN001"
         }
     },
     "SUM001": {
-        "sheet_dados": "LFN004 - Liquidação Financeira ",
-        "sheet_contatos": "Planilha1",
-        "header_row": 31,
-        "data_columns": "Agente:Empresa,Débito/Crédito:Situacao,Valor a Liquidar (R$):Valor",
-        "path_template": {
+        "planilha_dados": "LFN004 - Liquidação Financeira ",
+        "planilha_contatos": "Planilha1",
+        "linha_cabecalho": 31,
+        "colunas_dados": "Agente:Empresa,Débito/Crédito:Situacao,Valor a Liquidar (R$):Valor",
+        "modelo_caminho": {
             "excel_dados": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação Financeira/LFN004/ELECTRA ENERGY LFN004 {mes_abrev}.{ano_2dig}.xlsx",
-            "pdfs_dir": "{sharepoint_root}/{ano}/{ano_mes}/Sumário/SUM001"
+            "diretorio_pdfs": "{sharepoint_root}/{ano}/{ano_mes}/Sumário/SUM001"
         }
     },
     "LFN001": {
-        "sheet_dados": "LFN004 - Liquidação Financeira ",
-        "sheet_contatos": "Planilha1",
-        "header_row": 31,
-        "data_columns": "Agente:Empresa,Débito/Crédito:Situacao,Valor a Liquidar (R$):ValorLiquidacao,Valor Liquidado (R$):ValorLiquidado,Inadimplência (R$):ValorInadimplencia",
-        "path_template": {
+        "planilha_dados": "LFN004 - Liquidação Financeira ",
+        "planilha_contatos": "Planilha1",
+        "linha_cabecalho": 31,
+        "colunas_dados": "Agente:Empresa,Débito/Crédito:Situacao,Valor a Liquidar (R$):ValorLiquidacao,Valor Liquidado (R$):ValorLiquidado,Inadimplência (R$):ValorInadimplencia",
+        "modelo_caminho": {
             "excel_dados": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação Financeira/LFN004/ELECTRA ENERGY LFN004 {mes_abrev}.{ano_2dig} (pós).xlsx",
-            "pdfs_dir": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação Financeira/LFN001"
+            "diretorio_pdfs": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação Financeira/LFN001"
         }
     },
     "LFRES001": {
-        "sheet_dados": "LFRES002 - Liquidação de Energi",
-        "sheet_contatos": "Planilha1",
-        "header_row": 42,
-        "data_columns": "Agente:Empresa,Data do Débito:Data,Valor a Liquidar (R$):Valor,Tipo do Agente:TipoAgente",
-        "path_template": {
+        "planilha_dados": "LFRES002 - Liquidação de Energi",
+        "planilha_contatos": "Planilha1",
+        "linha_cabecalho": 42,
+        "colunas_dados": "Agente:Empresa,Data do Débito:Data,Valor a Liquidar (R$):Valor,Tipo do Agente:TipoAgente",
+        "modelo_caminho": {
             "excel_dados": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação da Energia de Reserva/LFRES002/ELECTRA_ENERGY_LFRES002_{mes_abrev}_{ano_2dig}.xlsx",
-            "pdfs_dir": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação da Energia de Reserva/LFRES001"
+            "diretorio_pdfs": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação da Energia de Reserva/LFRES001"
         }
     },
     "GFN - LEMBRETE": {
-        "sheet_dados": "GFN003 - Garantia Financeira po",
-        "sheet_contatos": "Planilha1",
-        "header_row": 30,
-        "data_columns": "Agente:Empresa,Garantia Avulsa (R$):Valor",
-        "path_template": {
+        "planilha_dados": "GFN003 - Garantia Financeira po",
+        "planilha_contatos": "Planilha1",
+        "linha_cabecalho": 30,
+        "colunas_dados": "Agente:Empresa,Garantia Avulsa (R$):Valor",
+        "modelo_caminho": {
             "excel_dados": "{sharepoint_root}/{ano}/{ano_mes}/Garantia Financeira/GFN003 - Excel/ELECTRA_ENERGY_GFN003_{mes_abrev}_{ano_2dig}.xlsx",
-            "pdfs_dir": "{sharepoint_root}/{ano}/{ano_mes}/Garantia Financeira/GFN001"
+            "diretorio_pdfs": "{sharepoint_root}/{ano}/{ano_mes}/Garantia Financeira/GFN001"
         }
     },
     "LFRCAP001": {
-        "sheet_dados": "LFRCAP002 - Liquidação de Reser",
-        "sheet_contatos": "Planilha1",
-        "header_row": 30,
-        "data_columns": "Agente:Empresa,Data do Débito:Data,Valor do Débito (R$):Valor",
-        "path_template": {
+        "planilha_dados": "LFRCAP002 - Liquidação de Reser",
+        "planilha_contatos": "Planilha1",
+        "linha_cabecalho": 30,
+        "colunas_dados": "Agente:Empresa,Data do Débito:Data,Valor do Débito (R$):Valor",
+        "modelo_caminho": {
             "excel_dados": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação de Reserva de Capacidade/LFRCAP002/ELECTRA_ENERGY_LFRCAP002_{mes_abrev}_{ano_2dig}.xlsx",
-            "pdfs_dir": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação de Reserva de Capacidade/LFRCAP001"
+            "diretorio_pdfs": "{sharepoint_root}/{ano}/{ano_mes}/Liquidação de Reserva de Capacidade/LFRCAP001"
         }
     },
     "RCAP002": {
-        "sheet_dados": "Sheet1",
-        "sheet_contatos": "Planilha1",
-        "header_row": 4,
-        "data_columns": "Sigla do Agente:Empresa,\"(S) ERCAP_C am\":Valor,Data:Data",
-        "path_template": {
+        "planilha_dados": "Sheet1",
+        "planilha_contatos": "Planilha1",
+        "linha_cabecalho": 4,
+        "colunas_dados": "Sigla do Agente:Empresa,\"(S) ERCAP_C am\":Valor,Data:Data",
+        "modelo_caminho": {
             "excel_dados": "{sharepoint_root}/{ano}/{ano_mes}/Reserva de Capacidade/RCAP002 - Consulta Dinamica/RCAP002 {mes_abrev}.{ano_2dig}.xlsx",
-            "pdfs_dir": "{sharepoint_root}/{ano}/{ano_mes}/Reserva de Capacidade/RCAP002"
+            "diretorio_pdfs": "{sharepoint_root}/{ano}/{ano_mes}/Reserva de Capacidade/RCAP002"
         }
     }
 }

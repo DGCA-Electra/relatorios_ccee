@@ -61,7 +61,7 @@
     },
     "RCAP002": {
         "planilha_dados": "Sheet1",
-        "sheet_contatos": "Planilha1",
+        "planilha_contatos": "Planilha1",
         "linha_cabecalho": 4,
         "colunas_dados": "Sigla do Agente:Empresa,(S) ERCAP_C am:Valor, Data:Data",
         "modelo_caminho": {

@@ -18,7 +18,7 @@
       "assinatura"
     ],
     "condicoes": "usado quando opção OPT1 selecionada / iterar por linhas onde agente = filtro",
-    "send_mode": "send",
+    "modo_envio": "send",
     "source": "VBA-GFN"
   },
   "SUM001": {
@@ -55,7 +55,7 @@
         "default": "padrao"
       }
     },
-    "send_mode": "display (rascunho).",
+    "modo_envio": "display (rascunho).",
     "source": "VBA-SUM"
   },
   "LFN001": {
@@ -76,7 +76,7 @@
       "assinatura"
     ],
     "condicoes": "usar corpo_html_credit se Cells(i,9) = 'Crédito', corpo_html_debit se 'Débito'.",
-    "send_mode": "display (rascunho) by default",
+    "modo_envio": "display (rascunho) by default",
     "source": "VBA-LFN"
   },
   "LFRES": {
@@ -111,7 +111,7 @@
       "arquivo",
       "assinatura"
     ],
-    "send_mode": "display (rascunho)",
+    "modo_envio": "display (rascunho)",
     "source": "VBA-RCAP"
   },
   "GFN - LEMBRETE": {
@@ -124,7 +124,7 @@
       "valor",
       "assinatura"
     ],
-    "send_mode": "display",
+    "modo_envio": "display",
     "source": "VBA-LEMBRETE"
   },
   "LFRCAP001": {
@@ -143,7 +143,7 @@
       "arquivo",
       "assinatura"
     ],
-    "send_mode": "display",
+    "modo_envio": "display",
     "source": "VBA-LFRCAP"
   }
 }

@@ -20,50 +20,50 @@ msal_app = msal.ConfidentialClientApplication(
     CLIENT_ID, authority=AUTHORITY, client_credential=CLIENT_SECRET
 )
 
-def get_auth_url():
+def obter_url_autenticacao():
     try:
-        auth_url = msal_app.get_authorization_request_url(
+        url_autenticacao = msal_app.get_authorization_request_url(
             SCOPES,
             redirect_uri=REDIRECT_URI,
             response_type='code'
         )
-        return auth_url
+        return url_autenticacao
     except Exception as e:
         logging.error(f"Erro ao gerar URL de autenticação: {e}")
         st.error("Ocorreu um erro ao preparar o login. Verifique as configurações.")
         return None
 
-def get_token_from_code(auth_code):
+def obter_token_do_codigo(codigo_autorizacao):
     """Troca o código de autorização por um token de acesso."""
-    result = None
+    resultado = None
     try:
-        result = msal_app.acquire_token_by_authorization_code(
-            auth_code,
+        resultado = msal_app.acquire_token_by_authorization_code(
+            codigo_autorizacao,
             scopes=SCOPES,
             redirect_uri=REDIRECT_URI
         )
-        if "error" in result:
-            logging.error(f"Erro MSAL ao obter token: {result.get('error_description')}")
-            st.error(f"Erro ao obter token: {result.get('error_description')}")
+        if "error" in resultado:
+            logging.error(f"Erro MSAL ao obter token: {resultado.get('error_description')}")
+            st.error(f"Erro ao obter token: {resultado.get('error_description')}")
             return None
-        if "access_token" not in result:
-             logging.error(f"Resposta inesperada do MSAL (sem access_token): {result}")
+        if "access_token" not in resultado:
+             logging.error(f"Resposta inesperada do MSAL (sem access_token): {resultado}")
              st.error("Falha ao obter o token de acesso da Microsoft.")
              return None
-        return result
+        return resultado
     except Exception as e:
         logging.error(f"Exceção ao adquirir token: {e}")
         st.error(f"Falha na comunicação com o serviço de autenticação: {e}")
         return None
 
-def get_user_info(access_token):
+def obter_info_usuario(token_acesso):
     """Busca informações básicas do usuário logado usando o token."""
-    headers = {'Authorization': 'Bearer ' + access_token}
+    headers = {'Authorization': 'Bearer ' + token_acesso}
     try:
-        response = requests.get('https://graph.microsoft.com/v1.0/me?$select=displayName,userPrincipalName', headers=headers)
-        response.raise_for_status()
-        user_data = response.json()
-        return user_data
+        resposta = requests.get('https://graph.microsoft.com/v1.0/me?$select=displayName,userPrincipalName', headers=headers)
+        resposta.raise_for_status()
+        dados_usuario = resposta.json()
+        return dados_usuario
     except requests.exceptions.RequestException as e:
         logging.error(f"Erro ao buscar informações do usuário na API Graph: {e}")
         st.error("Não foi possível buscar as informações do usuário.")
@@ -76,22 +76,22 @@ def show_login_page():
     st.title("Login - Envio de Relatórios CCEE")
     st.write("Por favor, autentique-se com sua conta Microsoft para continuar.")
 
-    query_params = st.query_params
-    auth_code = query_params.get("code")
+    parametros_consulta = st.query_params
+    codigo_autorizacao = parametros_consulta.get("code")
 
-    if auth_code:
+    if codigo_autorizacao:
         st.query_params["code"] = ""
 
-        token_response = get_token_from_code(auth_code)
+        resposta_token = obter_token_do_codigo(codigo_autorizacao)
 
-        if token_response:
-            st.session_state["ms_token"] = token_response
+        if resposta_token:
+            st.session_state["ms_token"] = resposta_token
 
-            user_data = get_user_info(token_response['access_token'])
-            if user_data:
+            dados_usuario = obter_info_usuario(resposta_token['access_token'])
+            if dados_usuario:
                 st.session_state["user_info"] = {
-                    "displayName": user_data.get("displayName", "Usuário Desconhecido"),
-                    "userPrincipalName": user_data.get("userPrincipalName", "")
+                    "displayName": dados_usuario.get("displayName", "Usuário Desconhecido"),
+                    "userPrincipalName": dados_usuario.get("userPrincipalName", "")
                 }
             else:
                  st.session_state["user_info"] = {"displayName": "Usuário (Erro Info)", "userPrincipalName": ""}
@@ -99,13 +99,13 @@ def show_login_page():
             logging.info(f"Login bem-sucedido para: {st.session_state['user_info'].get('userPrincipalName')}")
             st.rerun()
         else:
-            auth_url = get_auth_url()
-            if auth_url:
-                st.markdown(f'<a href="{auth_url}" target="_self" class="button">Entrar com Microsoft</a>', unsafe_allow_html=True)
+            url_autenticacao = obter_url_autenticacao()
+            if url_autenticacao:
+                st.markdown(f'<a href="{url_autenticacao}" target="_self" class="button">Entrar com Microsoft</a>', unsafe_allow_html=True)
             st.error("Falha ao processar o login. Tente novamente.")
     else:
-        auth_url = get_auth_url()
-        if auth_url:
+        url_autenticacao = obter_url_autenticacao()
+        if url_autenticacao:
             st.markdown("""
         <style>
         .button { /* Estilos gerais do botão (fundo, padding, etc.) */
@@ -135,7 +135,7 @@ def show_login_page():
         /* Removidas as regras separadas .button:hover e .button:hover a */
         </style>
         """, unsafe_allow_html=True)
-            st.markdown(f'<a href="{auth_url}" target="_self" class="button">Entrar com Microsoft</a>', unsafe_allow_html=True)
+            st.markdown(f'<a href="{url_autenticacao}" target="_self" class="button">Entrar com Microsoft</a>', unsafe_allow_html=True)
         else:
             st.error("Não foi possível gerar o link de login. Verifique as configurações da aplicação.")
 
