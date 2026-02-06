@@ -1,222 +1,199 @@
-# 🤖 RPA-Envio-Emails-STREAMLIT
+# 🤖 RPA Envio de Emails - Streamlit & Microsoft Graph API
 
-## Automação Inteligente para Envio de Relatórios CCEE via E-mail com Streamlit
+## 📋 Visão Geral
 
-Este projeto inovador oferece uma solução de **Automação de Processos Robóticos (RPA)** para otimizar o envio de relatórios da Câmara de Comercialização de Energia Elétrica (CCEE) a clientes. Desenvolvido com **Streamlit**, ele proporciona uma interface web intuitiva para a geração e envio automatizado de e-mails personalizados, acompanhados de anexos em PDF, com base em dados extraídos de planilhas Excel.
+Este projeto é uma solução de **Automação de Processos Robóticos (RPA)** desenvolvida para otimizar o envio de relatórios da Câmara de Comercialização de Energia Elétrica (CCEE). Diferente de automações legadas baseadas em desktop, esta aplicação utiliza **Streamlit** para interface web e a **Microsoft Graph API** para integração direta com o Exchange Online, permitindo a geração de rascunhos de e-mail de forma segura, auditável e independente da máquina do usuário.
 
---- 
+A aplicação foi projetada para suportar múltiplos analistas e diversos tipos de relatórios regulatórios (GFN, SUM, LFN, LFRES, RCAP, etc.).
 
-## ✨ Funcionalidades Principais
+---
 
-O sistema foi projetado para oferecer uma experiência robusta e flexível, destacando-se por:
+## 🚀 Funcionalidades Principais
 
--   **Automação de E-mails**: Geração e envio automático de e-mails através da integração com o Microsoft Outlook, permitindo a criação de rascunhos para revisão ou envio direto.
--   **Suporte a Múltiplos Relatórios CCEE**: Compatibilidade com diversos tipos de relatórios, incluindo GFN001, SUM001, LFN001, LFRES, LEMBRETE, LFRCAP e RCAP, garantindo cobertura abrangente das necessidades da CCEE.
--   **Interface Web Intuitiva (Streamlit)**: Uma aplicação web amigável que simplifica a interação do usuário, tornando o processo de envio de relatórios acessível mesmo para usuários não técnicos.
--   **Configuração Dinâmica**: Permite a configuração flexível de parâmetros via interface web ou arquivos JSON, adaptando-se facilmente a novas necessidades ou mudanças nos formatos de relatório.
--   **Envio Multi-Analista**: Capacidade de qualquer usuário enviar relatórios em nome de qualquer analista, crucial para cenários de férias, ausências ou delegação de tarefas.
--   **Tratamento de Erros Robusto**: Mecanismos avançados de tratamento de erros para garantir a resiliência do sistema, com logs detalhados para diagnóstico e monitoramento.
--   **Engine de Templates Jinja2**: Utilização de templates Jinja2 para a criação dinâmica de assuntos e corpos de e-mail, permitindo alta personalização e flexibilidade na comunicação.
--   **Validação de Anexos**: Verificação automática da existência e do tamanho dos arquivos anexados, prevenindo erros de envio e garantindo a conformidade.
+* **Autenticação Moderna**: Login via **Microsoft Azure AD (OAuth 2.0)** utilizando a biblioteca `MSAL`, garantindo que apenas usuários autorizados acessem a ferramenta.
+* **Integração via API**: Criação de rascunhos diretamente na nuvem (pasta *Drafts* do usuário) via requisições REST à Microsoft Graph API, eliminando a necessidade do Outlook Desktop instalado.
+* **Interface Web Amigável**: Painel desenvolvido em Streamlit para seleção de parâmetros (Mês, Ano, Analista) e visualização de status.
+* **Multi-Relatório**: Suporte nativo e configurável para relatórios como:
+    * `GFN001` e `SUM001` (Garantia Financeira e Sumário)
+    * `LFN001` (Liquidação Financeira)
+    * `LFRES001` (Energia de Reserva)
+    * `LFRCAP001` e `RCAP002` (Reserva de Capacidade).
+* **Templates Dinâmicos**: Utilização de **Jinja2** para renderização de corpos de e-mail HTML personalizados, com suporte a condicionais (ex: textos diferentes para Crédito vs. Débito).
+* **Configuração Self-Service**: Interface dedicada para editar mapeamentos de Excel e templates JSON sem necessidade de alterar o código fonte.
 
---- 
+---
 
-## 🛠️ Tecnologias Utilizadas
+## 🏗️ Arquitetura e Estrutura do Projeto
 
-Este projeto foi construído com uma pilha de tecnologias modernas e eficientes:
+O projeto segue uma estrutura modular para facilitar a manutenção e testes:
 
-| Categoria         | Tecnologia         | Descrição                                                              |
-| :---------------- | :----------------- | :--------------------------------------------------------------------- |
-| **Framework Web** | Streamlit          | Para a construção da interface de usuário interativa e responsiva.     |
-| **Dados**         | Pandas             | Essencial para manipulação e análise de dados de planilhas Excel.      |
-| **Excel**         | OpenPyXL           | Biblioteca para leitura e escrita de arquivos `.xlsx`.                 |
-| **Automação**     | PyWin32            | Integração com o Microsoft Outlook para automação de e-mails (apenas Windows). |
-| **Caminhos**      | Pathlib            | Manipulação de caminhos de arquivo de forma orientada a objetos.       |
-| **Templates**     | Jinja2             | Motor de templates para renderização dinâmica de e-mails.              |
-| **Logging**       | `logging` (Python) | Para registro de eventos e depuração do sistema.                       |
-
---- 
-
-## 📦 Instalação e Configuração
-
-Para colocar o projeto em funcionamento, siga os passos abaixo:
-
-### Pré-requisitos
-
--   **Python**: Versão 3.8 ou superior.
--   **Sistema Operacional**: Windows (obrigatório para a integração com o Microsoft Outlook via `PyWin32`).
--   **Microsoft Outlook**: Instalado e configurado no ambiente local.
-
-### Passos de Instalação
-
-1.  **Clone o repositório**: Abra seu terminal ou prompt de comando e execute:
-
-    ```bash
-    git clone https://github.com/malikribeiro/RPA-Envio-Emails-STREAMLIT.git
-    cd RPA-Envio-Emails-STREAMLIT
-    ```
-
-2.  **Crie um ambiente virtual**: É altamente recomendável usar um ambiente virtual para gerenciar as dependências do projeto.
-
-    ```bash
-    python -m venv venv
-    ```
-
-3.  **Ative o ambiente virtual**:
-
-    -   **Windows (PowerShell)**:
-        ```bash
-        .\venv\Scripts\Activate.ps1
-        ```
-    -   **Windows (Command Prompt)**:
-        ```bash
-        .\venv\Scripts\activate.bat
-        ```
-    -   **Linux/macOS** (apenas para desenvolvimento, Outlook não será funcional):
-        ```bash
-        source venv/bin/activate
-        ```
-
-4.  **Instale as dependências**: Com o ambiente virtual ativado, instale todas as bibliotecas necessárias:
-
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-### Estrutura de Arquivos Esperada
-
-O sistema espera uma estrutura de diretórios específica para localizar os arquivos de relatório e contatos. Esta estrutura é baseada no login de rede do usuário e pode ser personalizada em `config.py`.
-
-```
-C:/Users/{login_usuario}/
-└── ELECTRA COMERCIALIZADORA DE ENERGIA S.A/
-    └── GE - ECE/
-        ├── DGCA/
-        │   ├── DGA/
-        │   │   └── CCEE/
-        │   │       └── Relatórios CCEE/
-        │   │           └── {ano}/
-        │   │               └── {ano_mes}/
-        │   │                   ├── Garantia Financeira/  # PDFs GFN001
-        │   │                   ├── Liquidação Financeira/ # PDFs LFN001
-        │   │                   ├── Sumário/             # PDFs SUM001
-        │   │                   └── ...
-        │   └── DGC/
-        │       └── Macro/
-        │           └── Contatos de E-mail para Macros.xlsx # Planilha de contatos
+```text
+RPA-Envio-Emails-STREAMLIT/
+├── .devcontainer/          # Configuração para desenvolvimento em Container
+├── .github/workflows/      # Pipelines de CI (Segurança e Testes)
+├── docs/                   # Documentação do projeto
+├── logs/                   # Diretório de logs de execução (ex: app.log)
+├── src/                    # Código fonte principal
+│   ├── config/             # Gerenciamento de configurações JSON e caminhos
+│   ├── handlers/           # Regras de negócio específicas por relatório
+│   ├── utils/              # Utilitários de segurança, arquivos e dados
+│   ├── view/               # Componentes de UI do Streamlit (Pages)
+│   └── services.py         # Orquestrador de envio e comunicação com Graph API
+├── static/                 # Assets estáticos (ícones, logos)
+├── tests/                  # Testes unitários com Pytest
+├── app.py                  # Ponto de entrada da aplicação
+└── requirements.txt        # Dependências do Python
 ```
 
---- 
+---
 
-## 🚀 Execução da Aplicação
+## 🛠️ Pré-requisitos e Instalação
 
-Após a instalação, siga estes passos para executar o RPA:
+### 1. Requisitos de Sistema
 
-1.  **Ative o ambiente virtual** (se ainda não estiver ativo).
+* **Python**: Versão 3.11 ou superior.
+* **Acesso Azure**: Registro de Aplicativo (App Registration) no Azure AD.
+* **Permissões API**: O app requer escopos `User.Read` e `Mail.ReadWrite`.
 
-2.  **Execute a aplicação Streamlit**:
+### 2. Configuração do Ambiente
 
-    ```bash
-    streamlit run app.py
-    ```
+Clone o repositório e instale as dependências:
 
-3.  **Acesse no navegador**: A aplicação estará disponível em `http://localhost:8501`.
+```bash
+git clone https://github.com/seu-repo/RPA-Envio-Emails-STREAMLIT.git
+cd RPA-Envio-Emails-STREAMLIT
 
---- 
+# Criar ambiente virtual
+python -m venv venv
 
-## 🖥️ Visão Geral da Interface e Navegação
+# Ativar ambiente (Windows)
+.\venv\Scripts\Activate.ps1
 
-A interface do usuário foi cuidadosamente projetada para ser clara e eficiente:
+# Instalar dependências
+pip install -r requirements.txt
+```
 
--   **Navegação Principal**: Localizada na barra lateral (sidebar), com opções como "Envio de Relatórios" e "Configurações".
--   **Parâmetros de Envio**: Todos os parâmetros essenciais (tipo de relatório, analista, mês, ano) estão centralizados no painel principal para facilitar o acesso.
--   **Pré-visualização de E-mail**: Uma funcionalidade de pré-visualização exibe o e-mail renderizado em HTML antes do envio, permitindo verificações.
--   **Visualização de Dados**: Dados e KPIs são apresentados em um layout limpo e responsivo, otimizado para a visualização.
+### 3. Variáveis de Ambiente (.env)
 
---- 
+Crie um arquivo `.env` na raiz do projeto com as credenciais do Azure AD:
 
-## ⚙️ Configurações Avançadas
+```ini
+# Configurações do Azure Active Directory
+AZURE_CLIENT_ID="seu_client_id_aqui"
+AZURE_CLIENT_SECRET="seu_client_secret_aqui"
+AZURE_TENANT_ID="seu_tenant_id_aqui"
 
-O projeto oferece opções de configuração para maior flexibilidade:
+# URI de Redirecionamento (Deve corresponder ao registrado no Azure)
+# Para local: http://localhost:8501
+# Para rede: https://SEU_IP:8501
+AZURE_REDIRECT_URI="http://localhost:8501"
+```
 
-### Configuração de Relatórios
+---
 
-Cada tipo de relatório pode ser ajustado via interface web na seção "Configurações" ou diretamente no arquivo `config_relatorios.json`. As configurações incluem o nome da aba dos dados (`sheet_dados`), a aba de contatos (`sheet_contatos`), a linha do cabeçalho (`header_row`) e o mapeamento de colunas (`data_columns`).
+## 🖥️ Como Executar
 
-Exemplo de `config_relatorios.json`:
+### Execução Padrão (Localhost)
+
+Para rodar a aplicação em sua máquina local:
+
+```bash
+streamlit run app.py
+```
+
+### Execução Segura em Rede (HTTPS)
+
+O Azure AD exige HTTPS para URIs de redirecionamento que não sejam `localhost`. O projeto inclui um script para facilitar isso:
+
+1. Gere certificados autoassinados (`cert.pem` e `key.pem`) com OpenSSL.
+2. Execute via PowerShell:
+
+```powershell
+.\run_secure.ps1
+```
+
+### Execução via DevContainer (Docker)
+
+Este projeto está configurado para VS Code DevContainers. Ao abrir a pasta no VS Code, aceite a sugestão para "Reopen in Container" para ter um ambiente Python 3.11 configurado automaticamente.
+
+---
+
+## ⚙️ Configuração de Relatórios
+
+O sistema é altamente configurável através de arquivos JSON localizados em `src/config/`.
+
+### Mapeamento de Dados (`config_relatorios.json`)
+
+Define como o robô lê o Excel de dados. Exemplo para `GFN001`:
 
 ```json
-{
-  "GFN001": {
+"GFN001": {
     "sheet_dados": "GFN003 - Garantia Financeira po",
     "sheet_contatos": "Planilha1",
     "header_row": 30,
-    "data_columns": "Agente:Empresa,Garantia Avulsa (R$):Valor"
-  }
+    "data_columns": "Agente:Empresa,Garantia Avulsa (R$):Valor",
+    "path_template": {
+        "excel_dados": "{sharepoint_root}/{ano}/{ano_mes}/Garantia...xlsx",
+        "pdfs_dir": "{sharepoint_root}/{ano}/{ano_mes}/GFN001"
+    }
 }
 ```
 
-### Templates de E-mail
+### Templates de E-mail (`email_templates.json`)
 
-Os templates de e-mail (assunto, corpo e anexos) são gerenciados via `config/email_templates.json` e podem ser editados através da interface de configurações. O sistema suporta variantes de templates para diferentes cenários, como no caso do relatório LFRES.
+Define o assunto e corpo do e-mail. Suporta variantes condicionais:
 
-### Adicionando Novos Tipos de Relatório
+```json
+"SUM001": {
+    "subject_template": "SUM001 - Liquidação - {empresa}",
+    "variants": {
+        "credito": { "body_html": "<p>Prezado, informamos crédito de {valor}...</p>" },
+        "debito": { "body_html": "<p>Prezado, informamos débito de {valor}...</p>" }
+    },
+    "logic": {
+        "variant_selector": "situacao",
+        "conditions": { "Crédito": "credito", "Débito": "debito" }
+    }
+}
+```
 
-Para estender o sistema com novos tipos de relatório:
+---
 
-1.  **Adicione a configuração** em `config.py` e `config_relatorios.json`.
-2.  **Crie um handler** correspondente em `services.py` para definir a lógica de processamento e montagem do e-mail para o novo tipo.
-3.  **Atualize `REPORT_HANDLERS`** em `services.py` para incluir o novo handler.
+## 🛡️ Segurança e Qualidade de Código
 
---- 
+O projeto utiliza ferramentas robustas para garantir a segurança e padronização do código, configuradas via CI/CD:
 
-## 🐛 Tratamento de Erros e Logs
+* **Detect Secrets**: Impede o commit acidental de credenciais e chaves de API.
+* **Bandit**: Análise estática de segurança (SAST) para Python.
+* **Black**: Formatador de código automático.
+* **Ruff**: Linter de alta performance.
+* **Pip-Audit**: Verifica vulnerabilidades conhecidas nas dependências instaladas.
 
-O sistema incorpora um tratamento de erros abrangente para garantir a estabilidade e a confiabilidade:
+Para rodar as verificações localmente antes de um commit:
 
--   **Verificação de Arquivos**: Validação da existência de arquivos e permissões de acesso.
--   **Validação de Configurações**: Checagem de configurações inválidas ou incompletas.
--   **Tratamento de Dados**: Gerenciamento de dados ausentes ou inconsistentes.
--   **Integração Outlook**: Tratamento de falhas na comunicação com o Microsoft Outlook.
+```bash
+pre-commit run --all-files
+```
 
-Todos os eventos e erros são registrados em `logs/app.log`, facilitando a depuração e o monitoramento do sistema.
+---
 
---- 
+## 🔍 Tratamento de Erros e Logs
 
-## 🔒 Segurança
+* **Logs de Aplicação**: Armazenados em `logs/app.log`. O sistema registra todo o fluxo de processamento, incluindo falhas de autenticação, arquivos não encontrados e erros de renderização de template.
+* **Interface**: Erros críticos são exibidos via `st.error` na interface do usuário para feedback imediato.
+* **Sanitização**: Todo input HTML nos templates é sanitizado via biblioteca `bleach` para prevenir injeção de código (XSS).
 
-Aspectos de segurança foram considerados no desenvolvimento:
-
--   **Login de Rede**: Autenticação baseada no usuário de rede para acesso seguro.
--   **Validação de Entrada**: Sanitização e validação de formatos de entrada para prevenir vulnerabilidades.
--   **Caminhos Seguros**: Tratamento seguro de caminhos de arquivo para evitar acessos não autorizados.
--   **Auditoria**: Logs detalhados para fins de auditoria e rastreabilidade.
-
---- 
+---
 
 ## 🤝 Contribuição
 
-Contribuições são bem-vindas! Para contribuir com o projeto:
+1. Realize um Fork do projeto.
+2. Crie uma Branch para sua Feature (`git checkout -b feature/NovaFeature`).
+3. Commit suas mudanças (`git commit -m 'Adiciona Nova Feature'`).
+4. Push para a Branch (`git push origin feature/NovaFeature`).
+5. Abra um Pull Request.
 
-1.  Faça um fork do repositório.
-2.  Crie uma nova branch para sua feature (`git checkout -b feature/minha-nova-feature`).
-3.  Implemente suas mudanças e certifique-se de que os testes passem.
-4.  Submeta um Pull Request detalhado.
+---
 
---- 
-
-## 📄 Licença
-
-Este projeto é de uso interno da ELECTRA COMERCIALIZADORA DE ENERGIA S.A.
-
---- 
-
-## 👥 Autores
-
--   **Desenvolvido para**: DGCA
--   **Mantido por**: Malik Ribeiro Mourad
-
---- 
-
-**Versão**: 1.0.0  
-**Última atualização**: Outubro 2025
+**Desenvolvido por:** Malik Ribeiro Mourad  
+**Licença:** Uso interno - Electra Energy

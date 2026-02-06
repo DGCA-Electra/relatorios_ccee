@@ -2,6 +2,9 @@
 venv/
 .env/
 .envrc
+.env
+key.pem
+cert.pem
 
 # Arquivos do Python
 __pycache__/
