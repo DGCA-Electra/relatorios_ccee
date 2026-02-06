@@ -267,8 +267,13 @@ def definir_variante_template(tipo_relatorio: str, report_config: Dict[str, Any]
             if not variant:
                 logging.warning(f"Variante {variant_name} não encontrada para {selector_value}, usando padrão")
                 variant = variantes.get("padrao", {})
+
+            merged = {**report_config, **variant}
+
+            if 'variantes' in merged and isinstance(merged['variantes'], dict):
+                merged.pop('variantes', None)
             logging.info(f"SUM001 Variante selecionada para {context.get('empresa')}: {variant_name} (selector={selector_value})")
-            return variant, variant_name
+            return merged, variant_name
     # Lógica específica para LFRES
     if tipo_relatorio.startswith("LFRES"):
         raw_val = context.get("valor", 0.0)
