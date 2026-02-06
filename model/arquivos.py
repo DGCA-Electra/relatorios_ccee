@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).parent.parent.parent 
+ROOT_DIR = Path(__file__).parent.parent.parent.parent
 ASSETS_DIR = ROOT_DIR / "assets"
-TEMPLATES_JSON_PATH = "src/configuracoes/email_templates.json"
+TEMPLATES_JSON_PATH = Path(__file__).parent.parent / "configuracoes" / "email_templates.json"
 
 class ErroProcessamento(Exception):
     pass

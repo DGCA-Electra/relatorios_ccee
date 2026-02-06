@@ -2,7 +2,8 @@ import json
 import os
 from pathlib import Path
 from typing import Dict, Any
-from src.configuracoes.constantes import DEFAULT_CONFIGS, PATH_CONFIGS, CONFIG_FILE
+from apps.relatorios_ccee.configuracoes.constantes import DEFAULT_CONFIGS, PATH_CONFIGS, CONFIG_FILE
+
 def obter_caminhos_brutos_usuario(username: str) -> Dict[str, str]:
     """Gera os caminhos base para um usuário específico (sem validar existência)."""
     user_base = f"{PATH_CONFIGS['user_base']}/{username}"

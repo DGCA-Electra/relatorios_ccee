@@ -2,12 +2,13 @@ import streamlit as st
 import pandas as pd
 import logging
 import streamlit.components.v1 as components
-from datetime import datetime
+import apps.relatorios_ccee.configuracoes.constantes as config
+import apps.relatorios_ccee.model.servicos as services
 
-import configuracoes.constantes as config
-from configuracoes.gerenciador import carregar_configuracoes
-import model.servicos as services
-from model.tabelas import tratar_valores_df
+from datetime import datetime
+from apps.relatorios_ccee.configuracoes.gerenciador import carregar_configuracoes
+from apps.relatorios_ccee.controller import report_controller as rc
+from apps.relatorios_ccee.model.tabelas import tratar_valores_df
 
 def iniciar_estado_sessao():
     mes_atual_idx = datetime.now().month - 1
@@ -66,42 +67,27 @@ def exibir_pagina_principal() -> None:
             st.rerun()
 
     if st.session_state.get("gatilho_envio"):
-        token_acesso = st.session_state.get("ms_token", {}).get("access_token")
-        if token_acesso:
-            with st.spinner("Criando rascunhos na sua caixa de e-mail... Aguarde."):
-                try:
-                    resultados = services.informa_processos(
-                        tipo_relatorio=tipo,
-                        analista=analista_final,
-                        mes=mes,
-                        ano=str(ano)
-                    )
-                    st.session_state.resultados = resultados
-                    st.success(f"✅ Rascunhos criados com sucesso na sua caixa de e-mail para {len(resultados)} empresas.")
-                except services.ErroProcessamento as e:
-                    st.error(f"❌ Erro no processamento: {e}")
-                except Exception as e:
-                     st.error(f"❌ Ocorreu um erro inesperado durante o envio: {e}")
-                     logging.exception("Erro inesperado durante informa_processos:")
-        else:
-            st.error("Erro: Sua sessão expirou ou o login falhou. Por favor, faça login novamente.")
+        with st.spinner("Criando rascunhos na sua caixa de e-mail... Aguarde."):
+            try:
+                resultados = rc.criar_rascunhos(tipo, analista_final, mes, str(ano))
+                st.session_state.resultados = resultados
+                st.success(f"✅ Rascunhos criados com sucesso na sua caixa de e-mail para {len(resultados)} empresas.")
+            except Exception as e:
+                st.error(f"❌ Erro no processamento: {e}")
+                logging.exception("Erro inesperado durante criação de rascunhos:")
         st.session_state.gatilho_envio = False
 
     if st.session_state.get("gatilho_previa"):
         with st.spinner("Carregando dados para visualização... Por favor, aguarde."):
             try:
-                df_filtrado, config_previa_dados = services.visualizar_previa_dados(
-                    tipo_relatorio=tipo, 
-                    analista=analista_final, 
-                    mes=mes, 
-                    ano=str(ano)
-                )
+                df_filtrado, config_previa_dados = rc.visualizar_previa(tipo, analista_final, mes, str(ano))
                 st.session_state.dados_previa_brutos = df_filtrado
                 st.session_state.config_previa = config_previa_dados
                 st.session_state.dados_formulario = {'tipo': tipo, 'analista': analista_final, 'mes': mes, 'ano': ano}
                 st.success(f'✅ Dados carregados com sucesso! {len(df_filtrado)} empresas encontradas para {analista_final}.')
-            except services.ErroProcessamento as e:
+            except Exception as e:
                 st.error(f"❌ Erro de processamento: {e}")
+                logging.exception("Erro inesperado durante visualização de prévia:")
         st.session_state.gatilho_previa = False
 
     def exibir_previa_email(assunto: str, corpo_html: str):
@@ -136,7 +122,7 @@ def exibir_pagina_principal() -> None:
                 }
                 
                 try:
-                    renderizado = services.renderizar_email_modelo(tipo, dados_empresa, dados_comuns, cfg)
+                    renderizado = rc.renderizar_email_preview(tipo, dados_empresa, analista_final, mes, str(ano), cfg)
                     with st.expander(f"Prévia #{idx+1} - {dados_empresa.get('Empresa','')}", expanded=False):
                         exibir_previa_email(renderizado['assunto'], renderizado['corpo'])
                 except Exception as e:

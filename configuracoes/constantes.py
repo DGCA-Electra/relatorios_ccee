@@ -1,7 +1,7 @@
 from pathlib import Path
 from datetime import datetime
 
-CONFIG_FILE = Path('src/configuracoes/config_relatorios.json')
+CONFIG_FILE = Path(__file__).parent / 'config_relatorios.json'
 
 ANALISTAS = [
     'Artur Bello Rodrigues', 'Camila Padovan Baptista', 'Cassiana Unruh',

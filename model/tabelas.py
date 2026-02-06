@@ -1,5 +1,5 @@
 import pandas as pd
-from utils_dados import formatar_moeda, formatar_data
+from apps.relatorios_ccee.model.utils_dados import formatar_moeda, formatar_data
 
 def tratar_valores_df(df: pd.DataFrame, colunas_moeda=None, colunas_data=None, mapa_preenchimento=None):
 

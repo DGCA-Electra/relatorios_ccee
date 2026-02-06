@@ -2,7 +2,6 @@ import pandas as pd
 import re
 import os
 import base64
-import streamlit as st
 import mimetypes
 import requests
 import shutil
@@ -13,19 +12,22 @@ import logging
 from pathlib import Path as caminho
 from typing import Dict, List, Any, Optional, Tuple
 from jinja2 import Environment, BaseLoader, meta
-from configuracoes.constantes import MESES
-from configuracoes.gerenciador import carregar_configuracoes, construir_caminhos_relatorio
-from seguranca import sanitizar_html, sanitizar_assunto
-from utils_dados import converter_numero_br, formatar_moeda, formatar_data
-from arquivos import ler_dados_excel, encontrar_anexo, carregar_templates_email, ErroProcessamento
+from apps.relatorios_ccee.configuracoes.constantes import MESES
+from apps.relatorios_ccee.configuracoes.gerenciador import carregar_configuracoes, construir_caminhos_relatorio
+from apps.relatorios_ccee.model.seguranca import sanitizar_html, sanitizar_assunto
+from apps.relatorios_ccee.model.utils_dados import converter_numero_br, formatar_moeda, formatar_data
+from apps.relatorios_ccee.model.arquivos import ler_dados_excel, encontrar_anexo, carregar_templates_email, ErroProcessamento
 from .relatorios import PROCESSADORES_RELATORIO, processador_generico_relatorio
 
 def criar_rascunho_graph(token_acesso: str, destinatario: str, assunto: str, corpo: str, anexos: List[caminho]) -> bool:
-    """Cria um rascunho de e-mail na caixa do usuário logado via MS Graph API."""
+    """Cria um rascunho de e-mail na caixa do usuário logado via MS Graph API.
+
+    Raises:
+        ErroProcessamento: Em caso de falha na criação do rascunho ou ausência de token.
+    """
     if not token_acesso:
-        st.error("Token de acesso inválido ou ausente.")
         logging.error("Tentativa de criar rascunho sem token de acesso.")
-        return False
+        raise ErroProcessamento("Token de acesso inválido ou ausente.")
     graph_url = "https://graph.microsoft.com/v1.0/me/messages"
     headers = {
         'Authorization': 'Bearer ' + token_acesso,
@@ -119,16 +121,13 @@ def criar_rascunho_graph(token_acesso: str, destinatario: str, assunto: str, cor
             detalhes_erro = response.json().get('error', {})
             mensagem_erro = detalhes_erro.get('message', 'Erro desconhecido da API Graph.')
             logging.error(f"Erro ao criar rascunho via Graph API ({response.status_code}) para {destinatario}: {response.text}")
-            st.error(f"Erro da API ao criar rascunho ({response.status_code}): {mensagem_erro}")
-            return False
+            raise ErroProcessamento(f"Erro da API ao criar rascunho ({response.status_code}): {mensagem_erro}")
     except requests.exceptions.RequestException as e:
         logging.error(f"Erro de conexão com a API Graph ao criar rascunho: {e}")
-        st.error(f"Erro de conexão ao tentar criar rascunho: {e}")
-        return False
+        raise ErroProcessamento(f"Erro de conexão ao tentar criar rascunho: {e}")
     except Exception as e:
         logging.error(f"Erro inesperado em create_graph_draft: {e}", exc_info=True)
-        st.error(f"Erro inesperado ao criar rascunho: {e}")
-        return False
+        raise ErroProcessamento(f"Erro inesperado ao criar rascunho: {e}")
 def renderizar_email_modelo(tipo_relatorio: str, row: Dict[str, Any], dados_comuns: Dict[str, Any], config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     templates = carregar_templates_email()
     template_key = "LFRES" if tipo_relatorio.startswith("LFRES") else tipo_relatorio
@@ -325,7 +324,7 @@ def _indexar_diretorio(directory: str) -> Dict[str, caminho]:
     cache = {f.name.upper(): f for f in caminho_obj.glob("*.pdf")}
     logging.info(f"Diretório indexado: {directory} ({len(cache)} arquivos encontrados)")
     return cache
-def _preparar_dados_relatorio(tipo_relatorio: str, analista: str, mes: str, ano: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+def _preparar_dados_relatorio(tipo_relatorio: str, analista: str, mes: str, ano: str, user_info: Optional[Dict[str, Any]] = None) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """
     Função interna para carregar configs e dados.
     A decisão de usar caminho de REDE ou LOCAL agora é feita automaticamente pelo config_manager.
@@ -334,8 +333,9 @@ def _preparar_dados_relatorio(tipo_relatorio: str, analista: str, mes: str, ano:
     config = all_configs.get(tipo_relatorio)
     if not config:
         raise ErroProcessamento(f"Configuração para '{tipo_relatorio}' não encontrada.")
-    user_info = st.session_state.get("user_info", {})
-    email_usuario = user_info.get("userPrincipalName", "")
+    email_usuario = ""
+    if user_info:
+        email_usuario = user_info.get("userPrincipalName", "")
     username_rede = email_usuario.split("@")[0] if (email_usuario and "@" in email_usuario) else None
     if username_rede:
         logging.info(f"Usuário identificado para preferência de caminhos: {username_rede}")
@@ -373,12 +373,12 @@ def _preparar_dados_relatorio(tipo_relatorio: str, analista: str, mes: str, ano:
     if missing_email_mask.any():
         df_filtrado.loc[missing_email_mask, "Email"] = "EMAIL_NAO_ENCONTRADO"
     return df_filtrado, config
-def informa_processos(tipo_relatorio: str, analista: str, mes: str, ano: str) -> List[Dict[str, Any]]:
+def informa_processos(tipo_relatorio: str, analista: str, mes: str, ano: str, token_acesso: str, user_info: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     """
     Processa relatórios, renderiza e-mails e tenta criar rascunhos via API Graph.
     """
     logging.info(f"Iniciando processamento: {tipo_relatorio}, Analista: {analista}, {mes}/{ano}")
-    df_filtrado, config = _preparar_dados_relatorio(tipo_relatorio, analista, mes, ano)
+    df_filtrado, config = _preparar_dados_relatorio(tipo_relatorio, analista, mes, ano, user_info=user_info)
     if df_filtrado.empty:
         return []
     dados_comuns = {
@@ -392,10 +392,9 @@ def informa_processos(tipo_relatorio: str, analista: str, mes: str, ano: str) ->
     render_errors = 0
     api_errors = 0
     skipped_count = 0
-    token_acesso = st.session_state.get("ms_token", {}).get("access_token")
     if not token_acesso:
-        st.error("Erro: Usuário não autenticado. Não é possível criar rascunhos.")
-        return []
+        logging.error("Erro: Token de acesso ausente ao tentar enviar rascunhos.")
+        raise ErroProcessamento("Usuário não autenticado. Não é possível criar rascunhos.")
     for idx, row in df_filtrado.iterrows():
         try:
             logging.info(f"--- Processando Linha {idx+1}/{len(df_filtrado)}: {row.get('Empresa', 'N/A')} ---")
@@ -409,14 +408,14 @@ def informa_processos(tipo_relatorio: str, analista: str, mes: str, ano: str) ->
                  logging.warning(f"E-mail inválido para {row.get('Empresa')}. Pulando.")
                  api_errors += 1
                  continue
-            success = criar_rascunho_graph(
-                token_acesso,
-                destinatario_email,
-                dados_email["assunto"],
-                dados_email["corpo"],
-                dados_email["anexos"]
-            )
-            if success:
+            try:
+                criar_rascunho_graph(
+                    token_acesso,
+                    destinatario_email,
+                    dados_email["assunto"],
+                    dados_email["corpo"],
+                    dados_email["anexos"]
+                )
                 contagem_criados += 1
                 data_final = dados_email.get("final_data", {}).get("data") or row.get("Data")
                 results_success.append({
@@ -427,8 +426,9 @@ def informa_processos(tipo_relatorio: str, analista: str, mes: str, ano: str) ->
                     "contagem_anexos": len(dados_email.get("anexos", [])),
                     "contagem_criados": contagem_criados
                 })
-            else:
+            except ErroProcessamento as e:
                 api_errors += 1
+                logging.error(f"Falha ao criar rascunho para {row.get('Empresa')}: {e}")
         except ErroProcessamento as rpe:
              render_errors += 1
              logging.error(f"Erro processamento: {rpe}")
@@ -439,12 +439,11 @@ def informa_processos(tipo_relatorio: str, analista: str, mes: str, ano: str) ->
             continue
     logging.info(f"Fim do processamento. Criados: {contagem_criados}. Erros Render: {render_errors}. Erros API: {api_errors}")
     return results_success
-@st.cache_data(show_spinner=False)
-def visualizar_previa_dados(tipo_relatorio: str, analista: str, mes: str, ano: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+def visualizar_previa_dados(tipo_relatorio: str, analista: str, mes: str, ano: str, user_info: Optional[Dict[str, Any]] = None) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """
     Carrega dados para pré-visualização.
     """
-    df_filtrado, config = _preparar_dados_relatorio(tipo_relatorio, analista, mes, ano)
+    df_filtrado, config = _preparar_dados_relatorio(tipo_relatorio, analista, mes, ano, user_info=user_info)
     if df_filtrado.empty:
         raise ErroProcessamento(f"Nenhum registro encontrado para o analista '{analista}'")
     return df_filtrado, config

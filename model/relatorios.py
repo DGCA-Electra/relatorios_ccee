@@ -1,7 +1,7 @@
 import pandas as pd
 import logging
-from arquivos import ler_dados_excel
-from utils_dados import converter_numero_br 
+from apps.relatorios_ccee.model.arquivos import ler_dados_excel
+from apps.relatorios_ccee.model.utils_dados import converter_numero_br 
 
 def preparar_contexto_lfres(context, row, config, tipo_relatorio, **kwargs):
 

@@ -1,10 +1,11 @@
 import streamlit as st
-import msal
-import requests
 import os
 import logging
 from dotenv import load_dotenv
-from model.arquivos import obtem_asset_path
+import msal
+import requests
+from apps.relatorios_ccee.model.arquivos import obtem_asset_path
+from apps.relatorios_ccee.controller import auth_controller
 
 # --- CARREGAMENTO DO AMBIENTE ---
 # Garante que o .env seja lido da pasta atual do aplicativo
@@ -97,40 +98,24 @@ def obter_info_usuario(token_acesso):
         return None
 
 def show_login_page():
-    st.image(obtem_asset_path("logo.png"))
-    
+    st.image(obtem_asset_path("logo.png"), width=250)
     st.title("Login - Envio de Relatórios CCEE")
     st.write("Por favor, autentique-se com sua conta Microsoft para continuar.")
 
-    # Verifica retorno do Login (Callback)
-    parametros = st.query_params
-    codigo = parametros.get("code")
+    params = st.query_params
+    codigo = params.get("code")
 
     if codigo:
-        # Troca código por token
-        token_resp = obter_token_do_codigo(codigo)
-        
-        if token_resp:
-            st.session_state["ms_token"] = token_resp
-            user_data = obter_info_usuario(token_resp['access_token'])
-            
-            if user_data:
-                st.session_state["user_info"] = {
-                    "displayName": user_data.get("displayName", "Usuário"),
-                    "userPrincipalName": user_data.get("userPrincipalName", "")
-                }
-            
-            st.rerun() # Recarrega para entrar no app principal
-        else:
-            st.error("Falha ao validar login. Tente novamente.")
-            # Gera novo link para tentar de novo
-            url_auth = obter_url_autenticacao()
+        try:
+            auth_controller.processar_callback(codigo)
+        except Exception as e:
+            st.error(f"Falha ao validar login: {e}")
+            logging.exception("Erro durante callback de autenticação:")
+            url_auth = auth_controller.obter_url_autenticacao()
             if url_auth:
                 st.markdown(f'<a href="{url_auth}" target="_self" class="button">Tentar Novamente</a>', unsafe_allow_html=True)
-
     else:
-        # Exibe botão de login inicial
-        url_auth = obter_url_autenticacao()
+        url_auth = auth_controller.obter_url_autenticacao()
         if url_auth:
             st.markdown("""
             <style>
@@ -150,5 +135,4 @@ def show_login_page():
             st.markdown(f'<a href="{url_auth}" target="_self" class="button">Entrar com Microsoft</a>', unsafe_allow_html=True)
         else:
             st.error("Erro ao gerar link de login.")
-
-    st.stop() # Para a execução aqui até logar
+    st.stop()

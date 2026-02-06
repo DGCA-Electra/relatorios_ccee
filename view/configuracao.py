@@ -3,11 +3,12 @@ import pandas as pd
 import json
 import logging
 import string
+import apps.relatorios_ccee.configuracoes.constantes as config
+import apps.relatorios_ccee.model.servicos as services
+
 from typing import Any
-import configuracoes.constantes as config
-from configuracoes.gerenciador import carregar_configuracoes, salvar_configuracoes
-from model.arquivos import carregar_templates_email, salvar_templates_email
-import model.servicos as services
+from apps.relatorios_ccee.configuracoes.gerenciador import carregar_configuracoes, salvar_configuracoes
+from apps.relatorios_ccee.model.arquivos import carregar_templates_email, salvar_templates_email
 
 def col_letter_to_index(letter: str) -> int:
     """Converte 'A' para 0, 'B' para 1, 'AA' para 26, etc."""
