@@ -1,0 +1,149 @@
+{
+  "GFN001": {
+    "assunto_template": "GFN001 - Aporte de Garantia Financeira à CCEE - {empresa} - {mes}/{ano}",
+    "anexos": [
+      "GFN: https://.../{ano}/{ano}{mes}/Garantia%20Financeira/GFN001/{arquivo2}.pdf",
+      "SUM: https://.../{ano}/{ano}{mes}/Sum%C3%A1rio/SUM001 - Mem%C3%B3ria_de_C%C3%A1lculo/{arquivo}.pdf"
+    ],
+    "corpo_html": "<p>Prezado(a),</p>\n\n<p>Seguem anexos os relatórios GFN001 e SUM001, que apresenta a Memória de Cálculo de Garantias Financeiras, divulgados pela Câmara de Comercialização de Energia Elétrica - CCEE, com os valores para aporte de Garantias Financeiras referentes à contabilização do mês de <strong>{mesext}/{ano}</strong>.</p>\n\n<p>A data para realização do aporte é <strong>{dataaporte}</strong>. Neste dia a CCEE irá verificar se o saldo na sua conta no Departamento de Ações e Custódia (DAWC) do Banco Bradesco contempla o valor do aporte.</p>\n\n<p>O saldo necessário em sua conta deverá ser maior ou igual a <strong>{valor}</strong>.</p>\n\n<p>Ressaltamos que os montantes de Garantias Financeiras refletem as premissas previstas na Resolução Normativa ANEEL 957/2021.</p>\n\n<p>O Quadro 2 - Valor da Garantia Financeira Avulsa, do GFN001, representa o montante a ser aportado pelo agente na data mencionada, sendo sua composição: ((Total de Garantia Financeira Necessária Preliminar) - (Valor do Ajuste de Garantia Financeira)) * 5%.</p>\n\n<p>Estamos à disposição para mais informações.</p>\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n",
+    "variaveis": [
+      "empresa",
+      "mes",
+      "ano",
+      "mesext",
+      "dataaporte",
+      "valor",
+      "arquivo",
+      "arquivo2",
+      "assinatura"
+    ],
+    "condicoes": "usado quando opção OPT1 selecionada / iterar por linhas onde agente = filtro",
+    "modo_envio": "send",
+    "source": "VBA-GFN"
+  },
+  "SUM001": {
+    "assunto_template": "SUM001 - Sumário da Liquidação Financeira - {empresa} - {mes}/{ano}.",
+    "anexos": [
+      "https://.../{ano}/{ano}{mes}/Sum%C3%A1rio/SUM001/{arquivo}.pdf"
+    ],
+    "variantes": {
+      "credito": {
+        "corpo_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório SUM001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente a liquidação financeira de <strong>{mesext}/{ano}</strong>. No dia <strong>{data_liquidacao}</strong> há uma previsão de <strong>crédito</strong> na sua conta no Departamento de Ações e Custódia (DAC) do Banco Bradesco de <strong>{valor}</strong>.</p>\n\n<p>Sendo assim, ressaltamos que esse crédito está sujeito ao rateio da eventual inadimplência observada no processo de liquidação financeira da Câmara. Dessa forma, caso o valor não seja creditado na íntegra, o mesmo será incluído no próximo ciclo de contabilização e liquidação financeira, estando o agente sujeito a um novo rateio de inadimplência, conforme Resolução ANEEL nº 552, de 14/10/2002.</p>\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n"
+      },
+      "debito": {
+        "corpo_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório SUM001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente a liquidação financeira de <strong>{mesext}/{ano}</strong>. No dia <strong>{data_liquidacao}</strong> há uma previsão de <strong>débito</strong> na sua conta no Departamento de Ações e Custódia (DAC) do Banco Bradesco de <strong>{valor}</strong>.</p>\n\n<p>Sendo assim, teoricamente a conta possui o saldo necessário, visto que o aporte financeiro foi solicitado anteriormente. No entanto, a fim de evitar qualquer penalidade junto à CCEE, orientamos a verificação do saldo e também que o aporte de qualquer diferença seja efetuado com 1 (um) dia útil de antecedência da data da liquidação financeira.</p>\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n"
+      },
+      "padrao": {
+        "corpo_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório SUM001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente a liquidação financeira de <strong>{mesext}/{ano}</strong>.</p>\n\n<p>Por favor, verifique os dados na planilha.</p>\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n"
+      }
+    },
+    "variaveis": [
+      "empresa",
+      "mes",
+      "ano",
+      "mesext",
+      "data_liquidacao",
+      "valor",
+      "arquivo",
+      "assinatura"
+    ],
+    "logica": {
+      "seletor_variante": "situacao",
+      "condicoes": {
+        "Crédito": "credito",
+        "Débito": "debito",
+        "default": "padrao"
+      }
+    },
+    "modo_envio": "display (rascunho).",
+    "source": "VBA-SUM"
+  },
+  "LFN001": {
+    "assunto_template": "LFN001 - Resultado da Liquidação Financeira - {empresa} - {mes}/{ano}",
+    "anexos": [],
+    "corpo_html": "<p>Prezado (a),</p>\n\n<p>Segue anexo o relatório LFN001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao resultado da liquidação financeira de <strong>{mesext}/{ano}</strong>.</p>\n\n<p>Valor a Liquidar do Agente: <strong>{ValorLiquidacao}</strong>.<br>Valor Liquidado do Agente: <strong>{ValorLiquidado}</strong>.<br>Participação do agente no rateio de inadimplências: <strong>{ValorInadimplencia}</strong>.</p>\n\n<p>Estamos à disposição para mais informações.</p>\n\n<p>Atenciosamente,</p>\n\n",
+    "corpo_html_credit": "<p>Prezado (a),</p>\n\n<p>Segue anexo o relatório LFN001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao resultado da liquidação financeira de <strong>{mesext}/{ano}</strong>. Este relatório demonstra a redução ocorrida no crédito da liquidação financeira decorrente do rateio das inadimplências dos agentes devedores da Câmara.</p>\n\n<p>Ressaltamos que no próximo ciclo de contabilização e liquidação financeira serão incluídos no resultado do agente todo e qualquer crédito não recebido, estando o agente sujeito a um novo rateio de inadimplência, conforme Resolução ANEEL nº 552, de 14/10/2002.</p>\n\n<p>Valor a Liquidar do Agente: <strong>{ValorLiquidacao}</strong>.<br>Valor Liquidado do Agente: <strong>{ValorLiquidado}</strong>.<br>Participação do agente no rateio de inadimplências: <strong>{ValorInadimplencia}</strong>.</p>\n\n<p>Estamos à disposição para mais informações.</p>\n\n<p>Atenciosamente,</p>\n\n",
+    "corpo_html_debit": "<p>Prezado (a),</p>\n\n<p>Segue anexo o relatório LFN001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao resultado da liquidação financeira de <strong>{mesext}/{ano}</strong>. Este relatório demonstra o valor debitado na liquidação financeira da CCEE.</p>\n\n<p>Valor a Liquidar do Agente: <strong>{ValorLiquidacao}</strong>.<br>Valor Liquidado do Agente: <strong>{ValorLiquidado}</strong>.<br>Inadimplência: <strong>{ValorInadimplencia}</strong>.</p>\n\n<p>Estamos à disposição para mais informações.</p>\n\n<p>Atenciosamente,</p>\n\n",
+    "variaveis": [
+      "empresa",
+      "mes",
+      "ano",
+      "mesext",
+      "ValorLiquidacao",
+      "ValorLiquidado",
+      "ValorInadimplencia",
+      "arquivo",
+      "assinatura"
+    ],
+    "condicoes": "usar corpo_html_credit se Cells(i,9) = 'Crédito', corpo_html_debit se 'Débito'.",
+    "modo_envio": "display (rascunho) by default",
+    "source": "VBA-LFN"
+  },
+  "LFRES": {
+    "variantes": {
+      "COM_VALOR_GERADOR": {
+        "assunto_template": "LFRES001 - Liquidação energia de reserva à CCEE - {empresa} - {mes}/{ano}",
+        "corpo_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório LFRES001 - Liquidação de Energia de Reserva de <strong>{mesext}/{ano}</strong>, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao pagamento de ressarcimento pela energia contratada não entregue.</p>\n\n<p>O valor do Encargo de Energia de Reserva - EER a ser debitado da sua conta no Departamento de Ações e Custódia (DAC) do Banco Bradesco é de <strong>{valor}</strong> e deverá estar disponível independentemente do valor do Aporte de Garantia Financeira.</p>\n\n<p>A data do débito será no dia <strong>{data}</strong>. Recomendamos que o valor seja disponibilizado com 1 (um) dia útil de antecedência.</p>\n\n<p>Estamos à disposição para mais informações.</p>\n\n"
+      },
+      "COM_VALOR_OUTROS": {
+        "assunto_template": "LFRES001 - Liquidação energia de reserva à CCEE - {empresa} - {mes}/{ano}",
+        "corpo_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório LFRES001, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente a Liquidação de Energia de Reserva de {mesext}/{ano}.</p>\n\n<p>O valor do Encargo de Energia de Reserva - EER a ser debitado da sua conta no Departamento de Ações e Custódia (DAC) do Banco Bradesco é de <strong>{valor}</strong> e deverá estar disponível independentemente do valor do Aporte de Garantia Financeira.</p>\n\n<p>A data do débito será no dia <strong>{data}</strong>. Recomendamos que o valor seja disponibilizado com 1 (um) dia útil de antecedência.</p>\n\n<p>Estamos à disposição para mais informações.</p>\n\n"
+      },
+      "ZERO_VALOR": {
+        "assunto_template": "LFRES001 - Liquidação energia de reserva à CCEE - {empresa} - {mes}/{ano}",
+        "corpo_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório LFRES001, referente à Liquidação de Energia de Reserva de <strong>{mesext}/{ano}</strong>.</p>\n\n<p>Para esse mês os recursos disponíveis na Conta de Energia de Reserva - CONER são suficientes para o pagamento de todas as obrigações vinculadas à energia de reserva, portanto, não será realizada a cobrança do Encargo de Energia de Reserva - EER no dia <strong>{data}</strong>.</p>\n\n<p>Estamos à disposição para mais informações.</p>\n\n"
+      }
+    }
+  },
+  "RCAP002": {
+    "assunto_template": "RCAP002 - Reserva de Capacidade - {empresa} - {mes}/{ano}.",
+    "anexos": [
+      "https://.../{ano}/{ano}{mes}/Reserva de Capacidade/RCAP002/{arquivo}.pdf"
+    ],
+    "corpo_html": "<p>Prezado(a),</p>\n\n\n\n<p>Segue anexo o relatório RCAP002, divulgado pela Câmara de Comercialização de Energia Elétrica - CCEE, referente ao resultado da Reserva de Capacidade de <strong>{mesext}/{ano}</strong>.</p>\n\n\n\n<p>O valor do Encargo de Reserva de Capacidade - ERCAP a ser debitado da sua conta no Departamento de Ações e Custódia (DAC) do Banco Bradesco é de <strong>{valor}</strong> e deverá estar disponível independentemente do valor do Aporte de Garantia Financeira.</p>\n\n\n\n<p>A data do débito será no dia <strong>{dataaporte}</strong>. Recomendamos que o valor seja disponibilizado com 1 (um) dia útil de antecedência.</p>\n\n\n\n<p>Estamos à disposição para mais informações.</p>\n\n\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n",
+    "variaveis": [
+      "empresa",
+      "mes",
+      "ano",
+      "mesext",
+      "Vaporte",
+      "dataaporte",
+      "arquivo",
+      "assinatura"
+    ],
+    "modo_envio": "display (rascunho)",
+    "source": "VBA-RCAP"
+  },
+  "GFN - LEMBRETE": {
+    "assunto_template": "Atenção hoje é o dia do Aporte de Garantia Financeira à CCEE - {empresa}",
+    "anexos": [],
+    "corpo_html": "<p>Prezado(a),</p>\n\n<p>Conforme informado anteriormente, hoje <strong>{dataaporte}</strong> é a data para o Aporte de Garantia Financeira à CCEE.</p>\n\n<p>O saldo necessário em sua conta deverá ser maior ou igual a <strong>{valor}</strong>.</p>\n\n<p>A CCEE verificará o saldo na conta no DAC/Bradesco e agentes que não realizarem o aporte podem sofrer ajustes/cortes de contratos e demais penalidades.</p>\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n",
+    "variaveis": [
+      "empresa",
+      "dataaporte",
+      "valor",
+      "assinatura"
+    ],
+    "modo_envio": "display",
+    "source": "VBA-LEMBRETE"
+  },
+  "LFRCAP001": {
+    "assunto_template": "LFRCAP001 - Liquidação de Reserva de Capacidade - {empresa} - {mes}/{ano}",
+    "anexos": [
+      "https://.../{ano}/{ano}{mes}/Liquidação%20de%20Reserva%20de%20Capacidade/LFRCAP001/{arquivo}.pdf"
+    ],
+    "corpo_html": "<p>Prezado(a),</p>\n\n<p>Segue anexo o relatório LFRCAP001, referente ao resultado da Liquidação Financeira de Reserva de Capacidade de <strong>{mesext}/{ano}</strong>.</p>\n\n<p>O valor do Encargo de Reserva de Capacidade - ERCAP a ser debitado é de <strong>{valor}</strong> e deverá estar disponível independentemente do valor do Aporte de Garantia Financeira.</p>\n\n<p>A data do débito será no dia <strong>{dataaporte}</strong>. Recomendamos disponibilizar o valor com 1 (um) dia útil de antecedência.</p>\n\n<p>Atenciosamente,<br>{assinatura}</p>\n\n",
+    "variaveis": [
+      "empresa",
+      "mes",
+      "ano",
+      "mesext",
+      "valor",
+      "dataaporte",
+      "arquivo",
+      "assinatura"
+    ],
+    "modo_envio": "display",
+    "source": "VBA-LFRCAP"
+  }
+}
